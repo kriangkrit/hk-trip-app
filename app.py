@@ -17,7 +17,6 @@ st.markdown("""
         color: #444;
     }
 
-    /* Buttons Style */
     .stButton>button {
         border-radius: 12px;
         border: 0.5px solid #eee;
@@ -27,14 +26,11 @@ st.markdown("""
     }
     .stButton>button:hover { border-color: #000; background-color: #fafafa; }
 
-    /* Minimal Inputs (Hide +/- Buttons) */
     button.step-up, button.step-down { display: none !important; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
-    /* Metrics Styling */
     [data-testid="stMetricValue"] { font-weight: 200 !important; font-size: 2.2rem !important; }
     
-    /* Hide Streamlit Default UI */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
@@ -49,7 +45,6 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 
-# Mapping สำหรับแปลงค่าไทยเป็นอังกฤษ
 cat_map = {
     "อาหาร": "Food", "เครื่องดื่ม": "Drinks", "การเดินทาง": "Transport", 
     "ช้อปปิ้ง": "Shopping", "ที่พัก": "Hotel", "ตั๋วเครื่องบิน": "Flight", "อื่น ๆ": "Others"
@@ -83,9 +78,7 @@ with tab1:
             parts = st.multiselect("Split with", members, default=members)
             settled = st.checkbox("Settled (Pre-paid)")
             
-            # ปุ่มกดยืนยัน (ต้องมีบรรทัดนี้ในทุก Form)
-            submitted = st.form_submit_button("SAVE")
-            if submitted:
+            if st.form_submit_button("SAVE"):
                 if item and amount and parts:
                     new_row = pd.DataFrame([{
                         "Timestamp": datetime.now().strftime("%y-%m-%d %H:%M"), 
@@ -112,19 +105,18 @@ with tab1:
                     curr_cat = r['Category'] if r['Category'] in eng_categories else "Others"
                     e_cat = st.selectbox("Category", eng_categories, index=eng_categories.index(curr_cat))
                     
-                    curr_parts = r['Participants'].split(", ")
+                    # FIXED: Define current_parts before using it
+                    current_parts = str(r['Participants']).split(", ")
                     e_parts = st.multiselect("Split with", members, default=[m for m in current_parts if m in members])
                     e_settled = st.checkbox("Settled", value=bool(r['Is_Settled']))
                     
-                    # ปุ่มกดยืนยันสำหรับ Edit
-                    updated = st.form_submit_button("UPDATE")
-                    if updated:
+                    if st.form_submit_button("UPDATE"):
                         df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'], df.at[idx, 'Payer'] = e_item, e_amount, e_payer
                         df.at[idx, 'Category'], df.at[idx, 'Participants'], df.at[idx, 'Is_Settled'] = e_cat, ", ".join(e_parts), e_settled
                         conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                         st.rerun()
 
-    # 3. DELETE (ไม่ต้องใช้ Form เพราะมีปุ่มยืนยันปุ่มเดียว)
+    # 3. DELETE
     if not df.empty:
         with st.expander("🗑️ DELETE"):
             sel_del = st.selectbox("Select to delete", ["-- Select --"] + [f"{i}: {r['Item']}" for i, r in df.iterrows()])
@@ -190,4 +182,4 @@ with tab3:
             for p in p_list: usage[p] += (float(r['Amount_HKD']) / len(p_list))
         
         usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
-        st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
+        st.table(usage_df.style.format({'HKD': '{:,.0f}', 'THB': '{:,.0f}'}))
