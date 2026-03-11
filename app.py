@@ -11,27 +11,26 @@ st.set_page_config(
 )
 
 # --- การเชื่อมต่อ Google Sheets ---
-# มั่นใจว่าได้ตั้งค่า Secrets ใน Streamlit Cloud แล้ว
-conn = st.connection("gsheets", type=GSheetsConnection)
+# ใช้ Sheet ID ของคุณโดยตรง
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 
-# --- ฟังก์ชันดึงข้อมูล ---
-def get_data(worksheet_name):
-    # ดึงข้อมูลจาก Tab ที่ระบุ (ชื่อ Sheet ใน Google Sheets)
-    return conn.read(worksheet=worksheet_name, ttl=0)
+conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- เมนู Sidebar ---
 st.sidebar.title("📌 Menu")
 menu = st.sidebar.radio("ไปที่หน้า:", ["💰 บันทึกค่าใช้จ่าย", "📍 แผนการเดินทาง", "📊 สรุปยอดรวม"])
 
 # ---------------------------------------------------------
-# หน้า: บันทึกค่าใช้จ่าย
+# หน้า: บันทึกค่าใช้จ่าย (เชื่อมกับหน้าแรก gid=0)
 # ---------------------------------------------------------
 if menu == "💰 บันทึกค่าใช้จ่าย":
     st.title("💰 Expense Tracker")
-    st.markdown("บันทึกค่าใช้จ่ายทริปฮ่องกง 2026")
-
-    # ดึงข้อมูลปัจจุบันจาก Sheet ชื่อ "Sheet1" (หรือชื่อที่คุณตั้งไว้)
-    existing_data = get_data("Sheet1")
+    
+    # ดึงข้อมูลจาก Sheet หน้าแรก
+    try:
+        existing_data = conn.read(spreadsheet=SHEET_URL, worksheet="0", ttl=0)
+    except:
+        existing_data = pd.DataFrame()
 
     with st.form("expense_form", clear_on_submit=True):
         st.subheader("➕ เพิ่มรายการใหม่")
@@ -53,7 +52,6 @@ if menu == "💰 บันทึกค่าใช้จ่าย":
             if item == "" or amount == 0:
                 st.error("กรุณากรอกชื่อรายการและจำนวนเงิน")
             else:
-                # เตรียมข้อมูลใหม่
                 new_row = pd.DataFrame([{
                     "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "Item": item,
@@ -63,9 +61,8 @@ if menu == "💰 บันทึกค่าใช้จ่าย":
                     "Category": category
                 }])
                 
-                # อัปเดตข้อมูล
                 updated_df = pd.concat([existing_data, new_row], ignore_index=True)
-                conn.update(worksheet="Sheet1", data=updated_df)
+                conn.update(spreadsheet=SHEET_URL, data=updated_df)
                 
                 st.success(f"บันทึก '{item}' เรียบร้อยแล้ว!")
                 st.rerun()
@@ -73,21 +70,19 @@ if menu == "💰 บันทึกค่าใช้จ่าย":
     st.divider()
     st.subheader("📝 รายการทั้งหมด")
     if not existing_data.empty:
-        # แสดงตารางแบบย้อนหลัง (รายการล่าสุดอยู่บน)
         st.dataframe(existing_data.sort_index(ascending=False), use_container_width=True)
     else:
         st.info("ยังไม่มีข้อมูลบันทึกไว้")
 
 # ---------------------------------------------------------
-# หน้า: แผนการเดินทาง
+# หน้า: แผนการเดินทาง (เชื่อมกับ gid=1784624804)
 # ---------------------------------------------------------
 elif menu == "📍 แผนการเดินทาง":
     st.title("📍 Travel Plan")
-    st.markdown("ตารางเที่ยวฮ่องกง 5 วัดดัง และที่กินต่างๆ")
     
     try:
-        # ดึงข้อมูลจากหน้า "Itinerary"
-        df_plan = get_data("Itinerary")
+        # ดึงข้อมูลโดยระบุ gid ของหน้า Itinerary
+        df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0)
         
         if not df_plan.empty:
             for day in df_plan['Day'].unique():
@@ -100,25 +95,25 @@ elif menu == "📍 แผนการเดินทาง":
         else:
             st.warning("ไม่พบข้อมูลในหน้า Itinerary")
     except Exception as e:
-        st.error(f"ไม่สามารถดึงข้อมูลแผนการเดินทางได้: {e}")
-        st.info("ตรวจสอบให้แน่ใจว่าชื่อ Sheet คือ 'Itinerary' และมีหัวตารางครบ")
+        st.error(f"ไม่สามารถดึงข้อมูลได้ ตรวจสอบชื่อหัวตาราง (Day, Time, Location, Note)")
 
 # ---------------------------------------------------------
-# หน้า: สรุปยอดรวม (Settlement)
+# หน้า: สรุปยอดรวม
 # ---------------------------------------------------------
 elif menu == "📊 สรุปยอดรวม":
     st.title("📊 Settlement Summary")
     
-    df_exp = get_data("Sheet1")
-    
-    if not df_exp.empty:
-        total_spent = df_exp['Amount_HKD'].sum()
-        st.metric("ยอดรวมค่าใช้จ่ายทั้งหมด", f"{total_spent:,.2 False} HKD")
-        
-        # สรุปรายคน (เบื้องต้น)
-        st.subheader("💰 สรุปการจ่ายเงิน")
-        summary = df_exp.groupby('Payer')['Amount_HKD'].sum()
-        st.bar_chart(summary)
-        st.dataframe(summary)
-    else:
-        st.info("ยังไม่มีข้อมูลเพื่อคำนวณสรุปผล")
+    try:
+        df_exp = conn.read(spreadsheet=SHEET_URL, worksheet="0", ttl=0)
+        if not df_exp.empty:
+            total_spent = df_exp['Amount_HKD'].sum()
+            st.metric("ยอดรวมค่าใช้จ่ายทั้งหมด", f"{total_spent:,.2f} HKD")
+            
+            st.subheader("💰 สรุปการจ่ายเงินแยกรายคน")
+            summary = df_exp.groupby('Payer')['Amount_HKD'].sum()
+            st.bar_chart(summary)
+            st.dataframe(summary)
+        else:
+            st.info("ยังไม่มีข้อมูลค่าใช้จ่าย")
+    except:
+        st.error("เกิดข้อผิดพลาดในการคำนวณ")
