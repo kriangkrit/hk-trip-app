@@ -26,6 +26,12 @@ st.markdown("""
     input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     
     [data-testid="stMetricValue"] { font-weight: 300; letter-spacing: -1px; }
+
+    /* ลบส่วน Header ของ Streamlit และลดช่องว่างด้านบน */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .block-container { padding-top: 2rem; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -33,11 +39,11 @@ st.markdown("""
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+# --- ย้าย Title มาไว้ที่นี่ (หรือลบทิ้งถ้าไม่ต้องการให้โชว์เลย) ---
 st.title("HK Trip 2026")
 
 tab1, tab2, tab3 = st.tabs(["💰 Expense", "📍 Plan", "📊 Summary"])
 members = ["KK", "Charlie"]
-# แยกหมวดหมู่ อาหาร และ เครื่องดื่ม ตามคำขอ
 categories = ["อาหาร", "เครื่องดื่ม", "การเดินทาง", "ช้อปปิ้ง", "ที่พัก", "ตั๋วเครื่องบิน", "อื่น ๆ"]
 
 # --- Data Loading ---
@@ -48,10 +54,9 @@ except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled"])
 
 # ---------------------------------------------------------
-# TAB 1: บันทึกค่าใช้จ่าย
+# TAB 1: Expense
 # ---------------------------------------------------------
 with tab1:
-    # 1. เพิ่มรายการใหม่
     with st.expander("➕ Add Expense", expanded=True):
         with st.form("add_form", clear_on_submit=True):
             item = st.text_input("รายการ", placeholder="เช่น Dim Sum")
@@ -71,7 +76,6 @@ with tab1:
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
                     st.rerun()
 
-    # 2. แก้ไขรายการ (เพิ่มหมวดหมู่ และปรับปรุงตามคำขอ)
     if not df.empty:
         with st.expander("✏️ Edit"):
             list_edit = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
@@ -83,11 +87,8 @@ with tab1:
                     e_item = st.text_input("ชื่อรายการ", value=r['Item'])
                     e_amount = st.number_input("ราคา", value=float(r['Amount_HKD']), step=1.0)
                     e_payer = st.selectbox("คนจ่าย", members, index=members.index(r['Payer']))
-                    
-                    # เพิ่มส่วนแก้ไขหมวดหมู่ในหน้า Edit
                     current_cat = r['Category'] if r['Category'] in categories else "อื่น ๆ"
                     e_cat = st.selectbox("หมวดหมู่", categories, index=categories.index(current_cat))
-                    
                     current_parts = r['Participants'].split(", ")
                     e_parts = st.multiselect("คนหาร", members, default=[m for m in current_parts if m in members])
                     e_settled = st.checkbox("จ่ายจบแล้ว", value=bool(r['Is_Settled']))
@@ -103,7 +104,6 @@ with tab1:
                         st.success("Updated!")
                         st.rerun()
 
-    # 3. ลบรายการ
     if not df.empty:
         with st.expander("🗑️ Delete"):
             sel_del = st.selectbox("เลือกรายการที่จะลบ", ["-- Select --"] + [f"{i}: {r['Item']}" for i, r in df.iterrows()])
