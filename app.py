@@ -9,23 +9,50 @@ st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered"
 
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    /* เลือกฟอนต์ Montserrat สำหรับความ Minimal ที่ดูพรีเมียม */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400&display=swap');
     
-    .stButton>button {
-        border-radius: 12px;
-        border: 1px solid #f0f0f0;
-        background-color: white;
-        transition: all 0.3s;
+    html, body, [class*="css"] { 
+        font-family: 'Montserrat', sans-serif; 
+        color: #444;
     }
-    .stButton>button:hover { border-color: #000; background-color: #fafafa; }
+
+    /* ปรับหัวข้อให้บางและกว้างขึ้น */
+    h1, h2, h3 { 
+        font-weight: 200 !important; 
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+
+    /* ปรับแต่งปุ่มให้มนและโปร่งแสง */
+    .stButton>button {
+        border-radius: 8px;
+        border: 0.5px solid #eee;
+        background-color: #ffffff;
+        font-weight: 300;
+        letter-spacing: 1px;
+        transition: all 0.4s ease;
+    }
+    .stButton>button:hover { 
+        border-color: #000; 
+        background-color: #000; 
+        color: #fff;
+    }
+
+    /* ซ่อนปุ่ม +/- และปรับแต่งช่อง Input ให้เรียบที่สุด */
+    button.step-up, button.step-down { display: none; }
+    div[data-baseweb="input"] {
+        border-radius: 0px;
+        border-bottom: 1px solid #eee;
+        background-color: transparent !important;
+    }
     
-    button.step-up {display: none;}
-    button.step-down {display: none;}
-    div[data-baseweb="input"] > div > div {padding-right: 0;}
-    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    
-    [data-testid="stMetricValue"] { font-weight: 300; letter-spacing: -1px; }
+    /* ปรับแต่ง Metric (ตัวเลขสรุปเงิน) */
+    [data-testid="stMetricValue"] { 
+        font-weight: 200 !important; 
+        font-size: 2.5rem !important;
+        color: #222;
+    }
     </style>
 """, unsafe_allow_html=True)
 
