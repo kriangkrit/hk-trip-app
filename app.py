@@ -23,7 +23,6 @@ members = ["KK", "Charlie"]
 with tab1:
     try:
         df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
-        # เช็คและสร้างคอลัมน์ Is_Settled ถ้าไม่มีในไฟล์
         if 'Is_Settled' not in df.columns:
             df['Is_Settled'] = False
     except:
@@ -34,10 +33,11 @@ with tab1:
             col1, col2 = st.columns(2)
             with col1:
                 item = st.text_input("รายการ")
-                amount = st.number_input("ราคา (HKD)", min_value=0.0, step=0.1)
+                # ปรับตรงนี้: เปลี่ยนจาก 0.0 เป็น 0 และ step เป็น 1 เพื่อให้เป็นเลขจำนวนเต็ม
+                amount = st.number_input("ราคา (HKD)", min_value=0, value=0, step=1)
             with col2:
                 payer = st.selectbox("ใครจ่าย?", members)
-                category = st.selectbox("หมวดหมู่", ["อาหาร", "เครื่องดื่ม", "การเดินทาง", "ช้อปปิ้ง", "ที่พัก","ตั๋วเครื่องบิน", "อื่น ๆ"])
+                category = st.selectbox("หมวดหมู่", ["อาหาร/เครื่องดื่ม", "การเดินทาง", "ช้อปปิ้ง", "ที่พัก", "ตั๋วเครื่องบิน", "อื่น ๆ"])
             
             participants = st.multiselect("หารกับใครบ้าง?", members, default=members)
             is_settled = st.checkbox("จ่ายจบไปแล้ว (ไม่นำมาคำนวณยอดโอนคืน)")
@@ -68,9 +68,7 @@ with tab1:
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx).reset_index(drop=True))
                 st.rerun()
 
-# ---------------------------------------------------------
-# TAB 2: แผนการเดินทาง
-# ---------------------------------------------------------
+# (ส่วน Tab 2 และ Tab 3 โค้ดเดิมคงไว้...)
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
@@ -80,30 +78,24 @@ with tab2:
                     st.write(f"⏰ **{r['Time']}** : {r['Location']}")
     except: st.info("เตรียมข้อมูลในหน้า Itinerary")
 
-# ---------------------------------------------------------
-# TAB 3: สรุปยอดรวม
-# ---------------------------------------------------------
 with tab3:
     st.subheader("📊 สรุปยอดค่าใช้จ่าย")
     exch_rate = st.number_input("💵 เรตแลกเงิน (1 HKD = ? THB)", min_value=0.0, value=4.5, step=0.01)
 
     if not df.empty:
-        # 1. กราฟวงกลมสัดส่วนค่าใช้จ่าย
         st.write("### 🍰 สัดส่วนค่าใช้จ่ายทั้งหมด")
         cat_summary = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         fig = px.pie(cat_summary, values='Amount_HKD', names='Category', hole=0.4,
                      color_discrete_sequence=px.colors.qualitative.Pastel)
         st.plotly_chart(fig, use_container_width=True)
 
-        # 2. ตารางรายละเอียดรายหมวดหมู่ (อยู่ใต้กราฟตามคำขอ)
         st.write("**💰 รายละเอียดรายหมวดหมู่:**")
         cat_table = cat_summary.copy()
         cat_table['Amount_THB'] = cat_table['Amount_HKD'] * exch_rate
         cat_table.columns = ['หมวดหมู่', 'ยอดรวม (HKD)', 'ยอดรวม (THB)']
-        st.table(cat_table.style.format({'ยอดรวม (HKD)': '{:,.2f}', 'ยอดรวม (THB)': '{:,.2f}'}))
+        # ตรงนี้ยังใส่ทศนิยม .2f ไว้ในตารางสรุปเพื่อให้เห็นยอดบาทที่แม่นยำครับ
+        st.table(cat_table.style.format({'ยอดรวม (HKD)': '{:,.0f}', 'ยอดรวม (THB)': '{:,.2f}'}))
 
-        # 3. คำนวณยอดโอนคืน (กรองเฉพาะรายการที่ยังไม่ได้ Settled)
-        # ตรวจสอบค่าในคอลัมน์ Is_Settled ให้เป็น Boolean ชัวร์ๆ
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE')
         df_for_transfer = df[df['Is_Settled'] == False].copy()
         
@@ -119,7 +111,7 @@ with tab3:
                     actual_expense[p] += share
 
         st.divider()
-        st.write("### 💰 ยอดที่ต้องโอนคืนกัน")
+        st.write("### 💰 ยอดที่ต้องโอนคืนกัน (เฉพาะหน้างาน)")
         diff_hkd = total_paid["KK"] - actual_expense["KK"]
         diff_thb = abs(diff_hkd) * exch_rate
         
@@ -132,9 +124,8 @@ with tab3:
             st.info(f"🚩 **KK** ต้องโอนให้ **Charlie**")
             st.write(f"💸 **{abs(diff_hkd):,.2f} HKD** (ประมาณ **{diff_thb:,.2f} บาท**)")
 
-        # 4. สรุปยอดรวมต่อคน
         st.divider()
-        st.write("### 👤 สรุปค่าใช้จ่ายรวมต่อคน (รวมทุกรายการ)")
+        st.write("### 👤 สรุปค่าใช้จ่ายรวมต่อคน")
         personal_total = {m: 0.0 for m in members}
         for _, row in df.iterrows():
             parts = row['Participants'].split(", ")
@@ -143,6 +134,6 @@ with tab3:
                 if p in personal_total: personal_total[p] += share
         
         for m in members:
-            st.write(f"- **{m}** ใช้รวม: {personal_total[m]:,.2f} HKD ({personal_total[m]*exch_rate:,.2f} บาท)")
+            st.write(f"- **{m}** ใช้รวม: {personal_total[m]:,.0f} HKD ({personal_total[m]*exch_rate:,.2f} บาท)")
     else:
         st.info("ยังไม่มีข้อมูลค่าใช้จ่าย")
