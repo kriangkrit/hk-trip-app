@@ -9,6 +9,7 @@ st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered"
 
 st.markdown("""
     <style>
+    /* Force Fonts: Anuphan for Thai, Montserrat for English */
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
     html, body, [class*="css"], .stMarkdown, p, span, div, table, td, th { 
@@ -17,20 +18,25 @@ st.markdown("""
         color: #444;
     }
 
+    h1, h2, h3 { font-weight: 300 !important; letter-spacing: 1px; color: #222; }
+
+    /* Buttons Style */
     .stButton>button {
         border-radius: 12px;
         border: 0.5px solid #eee;
         background-color: #ffffff;
         transition: all 0.3s ease;
-        font-weight: 300 !important;
     }
     .stButton>button:hover { border-color: #000; background-color: #fafafa; }
 
+    /* Minimal Inputs (Hide +/- Buttons) */
     button.step-up, button.step-down { display: none !important; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
+    /* Metrics Styling */
     [data-testid="stMetricValue"] { font-weight: 200 !important; font-size: 2.2rem !important; }
     
+    /* Hide Streamlit Default UI */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
@@ -45,15 +51,18 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 
+# Mapping สำหรับแปลงค่าเก่าที่เป็นไทย ให้เป็นอังกฤษ (เพื่อความมินิมอล)
 cat_map = {
     "อาหาร": "Food", "เครื่องดื่ม": "Drinks", "การเดินทาง": "Transport", 
     "ช้อปปิ้ง": "Shopping", "ที่พัก": "Hotel", "ตั๋วเครื่องบิน": "Flight", "อื่น ๆ": "Others"
 }
+inv_cat_map = {v: k for k, v in cat_map.items()}
 eng_categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
 # --- Data Loading ---
 try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
+    # แปลง Category ในตารางให้เป็นอังกฤษทั้งหมด
     if not df.empty:
         df['Category'] = df['Category'].replace(cat_map)
     if 'Is_Settled' not in df.columns: df['Is_Settled'] = False
@@ -64,7 +73,6 @@ except:
 # TAB 1: EXPENSE
 # ---------------------------------------------------------
 with tab1:
-    # 1. ADD NEW
     with st.expander("➕ ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
             item = st.text_input("Item", placeholder="e.g. Dim Sum")
@@ -89,7 +97,6 @@ with tab1:
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
                     st.rerun()
 
-    # 2. EDIT
     if not df.empty:
         with st.expander("✏️ EDIT"):
             list_edit = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
@@ -102,12 +109,12 @@ with tab1:
                     e_amount = st.number_input("Price", value=float(r['Amount_HKD']), step=1.0)
                     e_payer = st.selectbox("Payer", members, index=members.index(r['Payer']))
                     
+                    # หาลำดับหมวดหมู่เดิม
                     curr_cat = r['Category'] if r['Category'] in eng_categories else "Others"
                     e_cat = st.selectbox("Category", eng_categories, index=eng_categories.index(curr_cat))
                     
-                    # FIXED: Define current_parts before using it
-                    current_parts = str(r['Participants']).split(", ")
-                    e_parts = st.multiselect("Split with", members, default=[m for m in current_parts if m in members])
+                    curr_parts = r['Participants'].split(", ")
+                    e_parts = st.multiselect("Split with", members, default=[m for m in curr_parts if m in members])
                     e_settled = st.checkbox("Settled", value=bool(r['Is_Settled']))
                     
                     if st.form_submit_button("UPDATE"):
@@ -116,7 +123,6 @@ with tab1:
                         conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                         st.rerun()
 
-    # 3. DELETE
     if not df.empty:
         with st.expander("🗑️ DELETE"):
             sel_del = st.selectbox("Select to delete", ["-- Select --"] + [f"{i}: {r['Item']}" for i, r in df.iterrows()])
@@ -147,9 +153,14 @@ with tab3:
     rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
     
     if not df.empty:
+        # Donut Chart - ปรับ Font ในกราฟด้วย
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig.update_layout(showlegend=True, margin=dict(t=10, b=10, l=10, r=10), font=dict(family="Anuphan", size=14))
+        fig.update_layout(
+            showlegend=True, 
+            margin=dict(t=10, b=10, l=10, r=10),
+            font=dict(family="Anuphan", size=14) # บังคับฟอนต์ในกราฟ
+        )
         st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("<p style='font-weight:300;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
@@ -157,6 +168,7 @@ with tab3:
         cat_table['THB'] = cat_table['Amount_HKD'] * rate
         st.table(cat_table.style.format({'Amount_HKD': '{:,.0f}', 'THB': '{:,.0f}'}))
 
+        # Settlement
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
         df_unsettled = df[df['Is_Settled'] == False]
         bal = {m: 0.0 for m in members}
@@ -182,4 +194,4 @@ with tab3:
             for p in p_list: usage[p] += (float(r['Amount_HKD']) / len(p_list))
         
         usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
-        st.table(usage_df.style.format({'HKD': '{:,.0f}', 'THB': '{:,.0f}'}))
+        st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
