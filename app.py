@@ -7,14 +7,14 @@ import plotly.express as px
 # --- การตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="HK Trip 2026 🇭🇰", page_icon="🇭🇰", layout="centered")
 
-# --- CSS สำหรับซ่อนปุ่ม + และ - ในช่องตัวเลข ---
+# --- CSS สำหรับซ่อนปุ่ม + และ - ในช่องตัวเลข (แก้ไขให้ถูกต้อง) ---
 st.markdown("""
     <style>
     /* ซ่อนปุ่มบวกและลบใน number input */
     button.step-up {display: none;}
     button.step-down {display: none;}
     div[data-baseweb="input"] > div > div {padding-right: 0;}
-    /* ปรับแต่งช่องกรอกให้ดูเหมือน text input ปกติ */
+    /* ปรับแต่งช่องกรอกให้ดูเหมือน text input ปกติ และไม่มีลูกศร */
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { 
         -webkit-appearance: none; 
@@ -24,7 +24,7 @@ st.markdown("""
         -moz-appearance: textfield;
     }
     </style>
-""", unsafe_allow_stdio=True)
+""", unsafe_allow_html=True) # แก้เป็น unsafe_allow_html
 
 # --- การเชื่อมต่อ Google Sheets ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
@@ -52,8 +52,7 @@ with tab1:
             col1, col2 = st.columns(2)
             with col1:
                 item = st.text_input("รายการ", placeholder="เช่น ติ่มซำ")
-                # กลับมาใช้ number_input แต่ซ่อนปุ่ม +/- ด้วย CSS ด้านบน
-                # วิธีนี้จะทำให้บนมือถือเด้งแป้นพิมพ์ตัวเลขเท่านั้น
+                # ใช้ number_input เพื่อให้มือถือเปิดแป้นตัวเลข แต่ซ่อนปุ่ม +/- ด้วย CSS ด้านบน
                 amount = st.number_input("ราคา (HKD)", min_value=1, value=None, step=1, placeholder="กรอกตัวเลข...")
             with col2:
                 payer = st.selectbox("ใครจ่าย?", members)
@@ -84,7 +83,6 @@ with tab1:
     st.subheader("📝 รายการทั้งหมด")
     st.dataframe(df.sort_index(ascending=False), use_container_width=True)
     
-    # ส่วนลบข้อมูล (เหมือนเดิม)
     if not df.empty:
         with st.expander("🗑️ ลบรายการ"):
             list_del = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
@@ -96,31 +94,40 @@ with tab1:
                 st.warning("ลบรายการเรียบร้อยแล้ว")
                 st.rerun()
 
-# (ส่วน Tab 2 และ Tab 3 คงเดิมตามเวอร์ชันก่อนหน้า...)
+# ---------------------------------------------------------
+# TAB 2: แผนการเดินทาง
+# ---------------------------------------------------------
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
-        for day in df_plan['Day'].unique():
-            with st.expander(f"📅 วันที่ {day}", expanded=True):
-                day_items = df_plan[df_plan['Day'] == day]
-                for _, row in day_items.iterrows():
-                    st.write(f"⏰ **{row['Time']}** : {row['Location']}")
+        if not df_plan.empty:
+            for day in df_plan['Day'].unique():
+                with st.expander(f"📅 วันที่ {day}", expanded=True):
+                    day_items = df_plan[df_plan['Day'] == day]
+                    for _, row in day_items.iterrows():
+                        st.write(f"⏰ **{row['Time']}** : {row['Location']}")
     except: st.info("เตรียมข้อมูลในหน้า Itinerary")
 
+# ---------------------------------------------------------
+# TAB 3: สรุปยอดรวม
+# ---------------------------------------------------------
 with tab3:
     st.subheader("📊 สรุปยอดค่าใช้จ่าย")
     exch_rate = st.number_input("💵 เรตแลกเงิน (1 HKD = ? THB)", min_value=0.0, value=4.5, step=0.01)
+    
     if not df.empty:
         st.write("### 🍰 สัดส่วนค่าใช้จ่ายทั้งหมด")
         cat_summary = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         fig = px.pie(cat_summary, values='Amount_HKD', names='Category', hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
         st.plotly_chart(fig, use_container_width=True)
+        
         st.write("**💰 รายละเอียดรายหมวดหมู่:**")
         cat_table = cat_summary.copy()
         cat_table['Amount_THB'] = cat_table['Amount_HKD'] * exch_rate
         cat_table.columns = ['หมวดหมู่', 'ยอดรวม (HKD)', 'ยอดรวม (THB)']
         st.table(cat_table.style.format({'ยอดรวม (HKD)': '{:,.2f}', 'ยอดรวม (THB)': '{:,.2f}'}))
         
+        # คำนวณยอดโอนคืน
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE')
         df_for_transfer = df[df['Is_Settled'] == False].copy()
         actual_expense = {m: 0.0 for m in members}
@@ -131,13 +138,16 @@ with tab3:
             share = float(row['Amount_HKD']) / len(parts)
             for p in parts:
                 if p in actual_expense: actual_expense[p] += share
+        
         st.divider()
         st.write("### 💰 ยอดที่ต้องโอนคืนกัน (เฉพาะหน้างาน)")
         diff_hkd = total_paid["KK"] - actual_expense["KK"]
         diff_thb = abs(diff_hkd) * exch_rate
+        
         col_res1, col_res2 = st.columns(2)
         with col_res1: st.metric("ยอดโอน (HKD)", f"{abs(diff_hkd):,.2f}")
         with col_res2: st.metric("ยอดโอน (THB)", f"{diff_thb:,.2f}")
-        if abs(diff_hkd) < 0.01: st.success("✅ ยอดลงตัวพอดี!")
+        
+        if abs(diff_hkd) < 0.01: st.success("✅ ยอดหน้างานลงตัวพอดี!")
         elif diff_hkd > 0: st.info(f"🚩 **Charlie** ต้องโอนให้ **KK** 👉 {abs(diff_hkd):,.2f} HKD")
         else: st.info(f"🚩 **KK** ต้องโอนให้ **Charlie** 👉 {abs(diff_hkd):,.2f} HKD")
