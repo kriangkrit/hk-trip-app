@@ -28,7 +28,6 @@ with tab1:
     except:
         df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled"])
 
-    # --- ส่วนที่ 1: เพิ่มรายการใหม่ ---
     with st.expander("➕ เพิ่มรายการใหม่"):
         with st.form("expense_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
@@ -55,12 +54,10 @@ with tab1:
                     st.success("บันทึกเรียบร้อย!")
                     st.rerun()
 
-    # --- ส่วนที่ 2: แก้ไขรายการ ---
     if not df.empty:
         with st.expander("✏️ แก้ไขรายการ"):
             list_edit = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
             sel_edit = st.selectbox("เลือกรายการที่จะแก้ไข", ["-- เลือก --"] + list_edit)
-            
             if sel_edit != "-- เลือก --":
                 idx_edit = int(sel_edit.split(":")[0])
                 row_data = df.iloc[idx_edit]
@@ -73,11 +70,9 @@ with tab1:
                         e_payer = st.selectbox("คนจ่าย", members, index=members.index(row_data['Payer']))
                         all_cats = ["ที่พัก", "ตั๋วเครื่องบิน", "อาหาร/เครื่องดื่ม", "การเดินทาง", "ช้อปปิ้ง", "อื่น ๆ"]
                         e_cat = st.selectbox("หมวดหมู่", all_cats, index=all_cats.index(row_data['Category']))
-                    
                     current_parts = row_data['Participants'].split(", ")
                     e_parts = st.multiselect("คนหาร", members, default=current_parts)
                     e_settled = st.checkbox("จ่ายจบไปแล้ว", value=bool(row_data['Is_Settled']))
-                    
                     if st.form_submit_button("🆙 อัปเดตรายการ"):
                         df.at[idx_edit, 'Item'] = e_item
                         df.at[idx_edit, 'Amount_HKD'] = e_amount
@@ -89,7 +84,6 @@ with tab1:
                         st.success("อัปเดตสำเร็จ!")
                         st.rerun()
 
-    # --- ส่วนที่ 3: ลบรายการ ---
     if not df.empty:
         with st.expander("🗑️ ลบรายการ"):
             list_del = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
@@ -139,7 +133,8 @@ with tab3:
         # 3. คำนวณยอดโอนคืน
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
         df_for_transfer = df[df['Is_Settled'] == False].copy()
-        actual_expense = {m: 0.0 for m in members}
+        
+        actual_expense_transfer = {m: 0.0 for m in members}
         total_paid_transfer = {m: 0.0 for m in members}
 
         for _, row in df_for_transfer.iterrows():
@@ -147,11 +142,11 @@ with tab3:
             parts = row['Participants'].split(", ")
             share = float(row['Amount_HKD']) / len(parts)
             for p in parts:
-                if p in actual_expense: actual_expense[p] += share
+                if p in actual_expense_transfer: actual_expense_transfer[p] += share
 
         st.divider()
         st.write("### 💰 ยอดที่ต้องโอนคืนกัน (เฉพาะหน้างาน)")
-        diff_hkd = total_paid_transfer["KK"] - actual_expense["KK"]
+        diff_hkd = total_paid_transfer["KK"] - actual_expense_transfer["KK"]
         if abs(diff_hkd) < 0.01:
             st.success("✅ ยอดหน้างานลงตัวพอดี!")
         elif diff_hkd > 0:
@@ -159,18 +154,31 @@ with tab3:
         else:
             st.info(f"🚩 **KK** ต้องโอนให้ **Charlie** 👉 {abs(diff_hkd):,.2f} HKD ({abs(diff_hkd)*exch_rate:,.2f} บาท)")
 
-        # 4. (ส่วนที่เพิ่มใหม่) สรุปยอดควักจ่ายจริงของแต่ละคน
+        # 4. สรุปยอดที่ใช้ไปจริงรายคน (ยอดที่หารแล้วทั้งหมด)
         st.divider()
-        st.write("### 👤 สรุปยอดเงินที่แต่ละคนจ่ายออกไป (ควักจ่ายจริง)")
+        st.write("### 👤 สรุปยอดค่าใช้จ่ายสุทธิรายคน (หารเรียบร้อยแล้ว)")
         
-        # คำนวณว่าแต่ละคนควักเงินจ่ายไปเท่าไหร่ (Total Paid)
-        paid_summary = df.groupby('Payer')['Amount_HKD'].sum().reindex(members, fill_value=0).reset_index()
-        paid_summary['Amount_THB'] = paid_summary['Amount_HKD'] * exch_rate
-        paid_summary.columns = ['ชื่อ', 'ควักจ่ายไป (HKD)', 'ควักจ่ายไป (THB)']
+        # คำนวณยอดที่ใช้จริง (Consumptions) จากทุกรายการในระบบ
+        personal_consumption = {m: 0.0 for m in members}
+        for _, row in df.iterrows():
+            parts = row['Participants'].split(", ")
+            share = float(row['Amount_HKD']) / len(parts)
+            for p in parts:
+                if p in personal_consumption:
+                    personal_consumption[p] += share
         
-        st.table(paid_summary.style.format({'ควักจ่ายไป (HKD)': '{:,.2f}', 'ควักจ่ายไป (THB)': '{:,.2f}'}))
+        # สร้าง DataFrame เพื่อแสดงผล
+        summary_data = []
+        for m in members:
+            summary_data.append({
+                "ชื่อ": m,
+                "ค่าใช้จ่ายสุทธิ (HKD)": personal_consumption[m],
+                "ค่าใช้จ่ายสุทธิ (THB)": personal_consumption[m] * exch_rate
+            })
         
-        # สรุปภาพรวมการใช้เงินของแต่ละคน (ใช้อ้างอิงว่าทริปนี้เราใช้เงินไปคนละเท่าไหร่)
-        st.caption("หมายเหตุ: ยอดควักจ่ายคือเงินทั้งหมดที่ออกจากกระเป๋าคนนั้นๆ (รวมรายการที่หารและจ่ายจบไปแล้ว)")
+        summary_df = pd.DataFrame(summary_data)
+        st.table(summary_df.style.format({'ค่าใช้จ่ายสุทธิ (HKD)': '{:,.2f}', 'ค่าใช้จ่ายสุทธิ (THB)': '{:,.2f}'}))
+        st.caption("หมายเหตุ: ยอดนี้คือยอดที่หารเฉลี่ยตามจริงของแต่ละคน (รวมทั้งที่จ่ายล่วงหน้าและจ่ายหน้างาน)")
+        
     else:
         st.info("ยังไม่มีข้อมูลค่าใช้จ่าย")
