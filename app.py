@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
+import plotly.express as px
 
 # --- การตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="HK Trip 2026 🇭🇰", page_icon="🇭🇰", layout="centered")
@@ -15,7 +16,7 @@ st.title("🇭🇰 Hong Kong Trip 2026")
 # --- สร้าง Tabs ---
 tab1, tab2, tab3 = st.tabs(["💰 บันทึกค่าใช้จ่าย", "📍 แผนการเดินทาง", "📊 สรุปยอดรวม"])
 
-# ปรับรายชื่อสมาชิกเป็น 2 คนตามจริง
+# รายชื่อสมาชิก
 members = ["KK", "Charlie"]
 
 # ---------------------------------------------------------
@@ -34,9 +35,8 @@ with tab1:
                 item = st.text_input("รายการ")
                 amount = st.number_input("ราคา (HKD)", min_value=0.0, step=0.1)
             with col2:
-                # เปลี่ยน Dropdown เป็นชื่อ KK และ Charlie
                 payer = st.selectbox("ใครจ่าย?", members)
-                category = st.selectbox("หมวดหมู่", ["อาหาร", "เดินทาง", "ช้อปปิ้ง", "ที่พัก", "อื่น ๆ"])
+                category = st.selectbox("หมวดหมู่", ["อาหาร", "เดินทาง", "ช้อปปิ้ง", "ที่พัก", "ทำบุญ/จิปาถะ", "อื่น ๆ"])
             
             participants = st.multiselect("หารกับใครบ้าง?", members, default=members)
             
@@ -80,11 +80,22 @@ with tab2:
     except: st.info("ไม่มีข้อมูลแผนการเดินทาง")
 
 # ---------------------------------------------------------
-# TAB 3: สรุปยอดรวม (Settlement สำหรับ KK & Charlie)
+# TAB 3: สรุปยอดรวม & แปลงเงินไทย
 # ---------------------------------------------------------
 with tab3:
-    st.subheader("📊 สรุปยอดโอนคืน")
+    st.subheader("📊 สรุปยอดค่าใช้จ่าย")
+    
+    # ตั้งค่าเรตเงินบาท (Sidebar หรือด้านบน)
+    exch_rate = st.number_input("💵 เรตแลกเงิน (1 HKD = ? THB)", min_value=0.0, value=4.5, step=0.01)
+
     if not df.empty:
+        # 1. กราฟหมวดหมู่ค่าใช้จ่าย
+        st.write("### 🍰 สัดส่วนค่าใช้จ่ายตามหมวดหมู่")
+        cat_summary = df.groupby('Category')['Amount_HKD'].sum().reset_index()
+        fig = px.pie(cat_summary, values='Amount_HKD', names='Category', hole=0.4)
+        st.plotly_chart(fig, use_container_width=True)
+
+        # 2. คำนวณ Settlement
         actual_expense = {m: 0.0 for m in members}
         total_paid = {m: 0.0 for m in members}
 
@@ -98,24 +109,33 @@ with tab3:
                 if p in actual_expense:
                     actual_expense[p] += share
 
-        col_sum1, col_sum2 = st.columns(2)
-        with col_sum1:
-            st.write("**💰 จ่ายไปจริง**")
-            for m in members: st.write(f"{m}: {total_paid[m]:,.2f} HKD")
-        with col_sum2:
-            st.write("**💸 ยอดที่ต้องหาร**")
-            for m in members: st.write(f"{m}: {actual_expense[m]:,.2f} HKD")
+        # แสดงยอด HKD และ THB
+        st.divider()
+        st.write("### 💰 สรุปยอดโอนคืน")
+        
+        diff_hkd = total_paid["KK"] - actual_expense["KK"]
+        diff_thb = abs(diff_hkd) * exch_rate
+        
+        col_res1, col_res2 = st.columns(2)
+        with col_res1:
+            st.metric("ยอดโอน (HKD)", f"{abs(diff_hkd):,.2f}")
+        with col_res2:
+            st.metric("ยอดโอน (THB)", f"{diff_thb:,.2f}")
+
+        if abs(diff_hkd) < 0.01:
+            st.success("✅ ยอดลงตัวพอดี ไม่ต้องโอนคืน!")
+        elif diff_hkd > 0:
+            st.info(f"🚩 **Charlie** ต้องโอนให้ **KK**")
+            st.write(f"💸 จำนวน: **{abs(diff_hkd):,.2f} HKD** (ประมาณ **{diff_thb:,.2f} บาท**)")
+        else:
+            st.info(f"🚩 **KK** ต้องโอนให้ **Charlie**")
+            st.write(f"💸 จำนวน: **{abs(diff_hkd):,.2f} HKD** (ประมาณ **{diff_thb:,.2f} บาท**)")
 
         st.divider()
-        st.write("### 📢 สรุปการโอนเงิน")
-        
-        diff = total_paid["KK"] - actual_expense["KK"]
-        
-        if abs(diff) < 0.01:
-            st.success("✅ ยอดลงตัวพอดี ไม่ต้องโอนคืน!")
-        elif diff > 0:
-            st.info(f"🚩 **Charlie** ต้องโอนให้ **KK** 👉 **{abs(diff):,.2f} HKD**")
-        else:
-            st.info(f"🚩 **KK** ต้องโอนให้ **Charlie** 👉 **{abs(diff):,.2f} HKD**")
+        with st.expander("🔍 ดูรายละเอียดการจ่ายจริง/ยอดหาร"):
+            st.write("**จ่ายไปจริง (Paid):**")
+            for m in members: st.write(f"- {m}: {total_paid[m]:,.2f} HKD")
+            st.write("**ยอดที่ต้องหาร (Shared):**")
+            for m in members: st.write(f"- {m}: {actual_expense[m]:,.2f} HKD")
     else:
         st.info("ยังไม่มีข้อมูลค่าใช้จ่าย")
