@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # ใส่ ID ของ Google Sheets ของคุณตรงนี้
-SHEET_ID = '1-X_your_google_sheet_id_here' 
+SHEET_ID = '1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc'
 SHEET_URL = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv'
 
 st.title("🇭🇰 HK Trip Expense")
