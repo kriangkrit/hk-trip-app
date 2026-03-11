@@ -32,9 +32,9 @@ with tab1:
         with st.form("expense_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
             with col1:
-                item = st.text_input("รายการ")
-                # ปรับตรงนี้: เปลี่ยนจาก 0.0 เป็น 0 และ step เป็น 1 เพื่อให้เป็นเลขจำนวนเต็ม
-                amount = st.number_input("ราคา (HKD)", min_value=0, value=0, step=1)
+                item = st.text_input("รายการ", placeholder="เช่น ติ่มซำ")
+                # ปรับตรงนี้: ใช้ value=None เพื่อให้เป็นช่องว่าง และระบุเป็น int
+                amount = st.number_input("ราคา (HKD)", min_value=1, value=None, step=1, placeholder="กรอกจำนวนเงิน...")
             with col2:
                 payer = st.selectbox("ใครจ่าย?", members)
                 category = st.selectbox("หมวดหมู่", ["อาหาร/เครื่องดื่ม", "การเดินทาง", "ช้อปปิ้ง", "ที่พัก", "ตั๋วเครื่องบิน", "อื่น ๆ"])
@@ -43,17 +43,23 @@ with tab1:
             is_settled = st.checkbox("จ่ายจบไปแล้ว (ไม่นำมาคำนวณยอดโอนคืน)")
             
             if st.form_submit_button("💾 บันทึก"):
-                if item and amount > 0 and participants:
+                # เช็คว่ากรอกครบไหม (amount ต้องไม่เป็น None)
+                if item and amount is not None and participants:
                     new_row = pd.DataFrame([{
                         "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "Item": item, "Amount_HKD": amount, "Payer": payer,
-                        "Participants": ", ".join(participants), "Category": category,
+                        "Item": item, 
+                        "Amount_HKD": int(amount), # บันทึกเป็นเลขเต็ม
+                        "Payer": payer,
+                        "Participants": ", ".join(participants), 
+                        "Category": category,
                         "Is_Settled": is_settled
                     }])
                     updated_df = pd.concat([df, new_row], ignore_index=True)
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=updated_df)
                     st.success(f"บันทึกเรียบร้อย!")
                     st.rerun()
+                else:
+                    st.error("⚠️ กรุณากรอก 'รายการ' และ 'ราคา' ให้เรียบร้อยก่อนกดบันทึก")
 
     st.divider()
     st.subheader("📝 รายการทั้งหมด")
@@ -68,7 +74,9 @@ with tab1:
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx).reset_index(drop=True))
                 st.rerun()
 
-# (ส่วน Tab 2 และ Tab 3 โค้ดเดิมคงไว้...)
+# ---------------------------------------------------------
+# TAB 2 & 3 (คงเดิม)
+# ---------------------------------------------------------
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
@@ -93,7 +101,6 @@ with tab3:
         cat_table = cat_summary.copy()
         cat_table['Amount_THB'] = cat_table['Amount_HKD'] * exch_rate
         cat_table.columns = ['หมวดหมู่', 'ยอดรวม (HKD)', 'ยอดรวม (THB)']
-        # ตรงนี้ยังใส่ทศนิยม .2f ไว้ในตารางสรุปเพื่อให้เห็นยอดบาทที่แม่นยำครับ
         st.table(cat_table.style.format({'ยอดรวม (HKD)': '{:,.0f}', 'ยอดรวม (THB)': '{:,.2f}'}))
 
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE')
