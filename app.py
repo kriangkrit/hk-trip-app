@@ -4,57 +4,72 @@ import pandas as pd
 from datetime import datetime
 import plotly.express as px
 
+import streamlit as st
+from streamlit_gsheets import GSheetsConnection
+import pandas as pd
+from datetime import datetime
+import plotly.express as px
+
 # --- Config & Minimalism Style ---
 st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered")
 
 st.markdown("""
     <style>
-    /* เลือกฟอนต์ Montserrat สำหรับความ Minimal ที่ดูพรีเมียม */
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400&display=swap');
+    /* ใช้ Anuphan สำหรับภาษาไทย และ Montserrat สำหรับภาษาอังกฤษ/ตัวเลข */
+    @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
     html, body, [class*="css"] { 
-        font-family: 'Montserrat', sans-serif; 
+        font-family: 'Anuphan', 'Montserrat', sans-serif; 
         color: #444;
     }
 
-    /* ปรับหัวข้อให้บางและกว้างขึ้น */
+    /* หัวข้อเน้นความบางและระยะห่าง */
     h1, h2, h3 { 
-        font-weight: 200 !important; 
-        letter-spacing: 2px;
-        text-transform: uppercase;
+        font-weight: 300 !important; 
+        letter-spacing: 1px;
     }
 
-    /* ปรับแต่งปุ่มให้มนและโปร่งแสง */
+    /* ปุ่มมนและเส้นบาง */
     .stButton>button {
-        border-radius: 8px;
+        border-radius: 10px;
         border: 0.5px solid #eee;
         background-color: #ffffff;
         font-weight: 300;
-        letter-spacing: 1px;
-        transition: all 0.4s ease;
+        transition: all 0.3s ease;
     }
     .stButton>button:hover { 
         border-color: #000; 
-        background-color: #000; 
-        color: #fff;
+        color: #000;
     }
 
-    /* ซ่อนปุ่ม +/- และปรับแต่งช่อง Input ให้เรียบที่สุด */
+    /* ปรับแต่ง Input ให้ดูคลีนที่สุด */
     button.step-up, button.step-down { display: none; }
     div[data-baseweb="input"] {
-        border-radius: 0px;
-        border-bottom: 1px solid #eee;
-        background-color: transparent !important;
+        border-radius: 4px;
+        border: 0.5px solid #f0f0f0;
     }
-    
-    /* ปรับแต่ง Metric (ตัวเลขสรุปเงิน) */
+
+    /* ตารางและ Metric */
     [data-testid="stMetricValue"] { 
-        font-weight: 200 !important; 
-        font-size: 2.5rem !important;
-        color: #222;
+        font-weight: 300 !important; 
+        font-size: 2rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
+
+# --- Connection ---
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
+conn = st.connection("gsheets", type=GSheetsConnection)
+
+st.title("HK Trip 2026")
+
+# ปรับชื่อ Tab ให้สั้นลงเพื่อความ Minimal
+tab1, tab2, tab3 = st.tabs(["ค่าใช้จ่าย", "แผนการ", "สรุป"])
+members = ["KK", "Charlie"]
+categories = ["อาหาร", "เครื่องดื่ม", "เดินทาง", "ช้อปปิ้ง", "ที่พัก", "ตั๋วเครื่องบิน", "อื่น ๆ"]
+
+# --- ข้อมูลสรุปส่วนท้าย (Tab 3) ปรับคำให้สั้นลง ---
+# ตัวอย่าง: เปลี่ยนจาก "ยอดที่ต้องโอนคืนกัน" เป็น "ยอดโอนคืน"
 
 # --- Connection ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
