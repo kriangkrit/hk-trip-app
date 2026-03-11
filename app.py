@@ -9,46 +9,53 @@ st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered"
 
 st.markdown("""
     <style>
-    /* 1. Import Fonts: Anuphan (Thai No-head) & Montserrat (Eng) */
+    /* 1. Import Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
-    html, body, [class*="css"], .stMarkdown, p, span, div, table, td, th { 
+    /* 2. Global Font Setup - เลี่ยงการทับ Icon */
+    html, body, [class*="css"], .stMarkdown, p, span, table, td, th { 
         font-family: 'Anuphan', 'Montserrat', sans-serif !important; 
         font-weight: 300 !important;
         color: #444;
     }
 
-    h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-top: -20px; }
-
-    /* 2. FIX: ลบตัวหนังสือ arrow_down / delete ที่ซ้อนทับกัน */
-    /* ซ่อน SVG และตัวอักษร Icon ของระบบทั้งหมดในหน้า Expander */
-    svg[data-testid="stExpanderIcon"] { display: none !important; }
-    span[data-testid="stWidgetLabel"] > div > div > p { font-size: 14px !important; }
-    
-    /* เจาะจงลบข้อความ icon ที่ชอบหลุดออกมา */
-    .st-emotion-cache-p4m0vl, .st-emotion-cache-6q9sum, .data-v-e67c7e { display: none !important; }
-    
-    /* 3. Buttons Style: มนและบาง */
-    .stButton>button {
-        border-radius: 12px;
-        border: 0.5px solid #eee;
-        background-color: #ffffff;
-        font-weight: 300 !important;
-        transition: all 0.3s ease;
+    /* 3. FIX: กำจัดตัวหนังสือ arrow_down / delete / edit ที่ซ้อนทับ */
+    /* ซ่อน icon ของระบบที่กลายเป็นตัวหนังสือทิ้งให้หมด */
+    [data-testid="stExpanderIcon"], 
+    [class*="st-emotion-cache"] svg, 
+    span[data-testid="stIconMaterial"] {
+        display: none !important;
     }
+    
+    /* บล็อกข้อความ icon ที่หลุดออกมาใน Expander Label */
+    summary > span > div > div {
+        font-size: 0 !important; /* ซ่อนตัวหนังสือ icon */
+    }
+    summary > span > div > div > p {
+        font-size: 16px !important; /* โชว์เฉพาะข้อความที่เราพิมพ์ */
+        font-family: 'Anuphan' !important;
+    }
+
+    /* 4. UI Minimalism */
+    h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; }
+    .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; }
     .stButton>button:hover { border-color: #000; background-color: #fafafa; }
 
-    /* 4. Minimal Inputs: ซ่อนปุ่ม +/- และกรอบบาง */
+    /* Hide Number Input Buttons */
     button.step-up, button.step-down { display: none !important; }
-    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; background-color: transparent !important; }
+    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
-    /* 5. Metrics & Streamlit UI Cleanup */
     [data-testid="stMetricValue"] { font-weight: 200 !important; font-size: 2.2rem !important; }
     #MainMenu, footer, header { visibility: hidden; }
     .block-container { padding-top: 2rem; }
     
-    /* ปรับแต่งแถบ Expander ให้ดูเบาบาง */
-    div[data-testid="stExpander"] { border: 1px solid #f9f9f9 !important; border-radius: 12px !important; box-shadow: none !important; }
+    /* Expander Styling */
+    div[data-testid="stExpander"] { 
+        border: 1px solid #f1f1f1 !important; 
+        border-radius: 12px !important; 
+        box-shadow: none !important;
+        margin-bottom: 10px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -74,7 +81,7 @@ except:
 # ---------------------------------------------------------
 with tab1:
     # 1. ADD NEW
-    with st.expander("➕ ADD NEW", expanded=True):
+    with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
             item = st.text_input("Item", placeholder="e.g. Dim Sum")
             c1, c2 = st.columns(2)
@@ -100,7 +107,7 @@ with tab1:
 
     # 2. EDIT
     if not df.empty:
-        with st.expander("✏️ EDIT"):
+        with st.expander("EDIT"):
             list_edit = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
             sel_edit = st.selectbox("Select to edit", ["-- Select --"] + list_edit)
             if sel_edit != "-- Select --":
@@ -124,7 +131,7 @@ with tab1:
 
     # 3. DELETE
     if not df.empty:
-        with st.expander("🗑️ DELETE"):
+        with st.expander("DELETE"):
             sel_del = st.selectbox("Select to delete", ["-- Select --"] + [f"{i}: {r['Item']}" for i, r in df.iterrows()])
             if sel_del != "-- Select --" and st.button("CONFIRM DELETE"):
                 idx = int(sel_del.split(":")[0])
@@ -135,7 +142,7 @@ with tab1:
     st.dataframe(df.sort_index(ascending=False)[['Item', 'Amount_HKD', 'Payer', 'Category']], use_container_width=True, hide_index=True)
 
 # ---------------------------------------------------------
-# TAB 2: PLAN
+# TAB 2 & 3: แผนการเดินทาง และ สรุป (เหมือนเดิม)
 # ---------------------------------------------------------
 with tab2:
     try:
@@ -146,24 +153,18 @@ with tab2:
                 st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{r['Time']} — {r['Location']}</p>", unsafe_allow_html=True)
     except: st.info("Itinerary data empty.")
 
-# ---------------------------------------------------------
-# TAB 3: SUMMARY
-# ---------------------------------------------------------
 with tab3:
     rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
-    
     if not df.empty:
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
         fig.update_layout(showlegend=True, margin=dict(t=10, b=10, l=10, r=10), font=dict(family="Anuphan", size=14))
         st.plotly_chart(fig, use_container_width=True)
 
-        st.markdown("<p style='font-weight:300; margin-top:20px;'>BREAKDOWN</p>", unsafe_allow_html=True)
         cat_table = cat_sum.copy()
         cat_table['THB'] = cat_table['Amount_HKD'] * rate
         st.table(cat_table.style.format({'Amount_HKD': '{:,.0f}', 'THB': '{:,.0f}'}))
 
-        # Settlement Calculation
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
         df_unsettled = df[df['Is_Settled'] == False]
         bal = {m: 0.0 for m in members}
@@ -182,11 +183,9 @@ with tab3:
         elif diff < -0.01: st.info(f"KK → Charlie")
 
         st.write("")
-        st.markdown("<p style='font-weight:300;'>NET SPEND PER PERSON</p>", unsafe_allow_html=True)
         usage = {m: 0.0 for m in members}
         for _, r in df.iterrows():
             p_list = r['Participants'].split(", ")
             for p in p_list: usage[p] += (float(r['Amount_HKD']) / len(p_list))
-        
         usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
         st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
