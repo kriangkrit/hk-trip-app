@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # --- การเชื่อมต่อ Google Sheets ---
-# ใช้ Sheet ID ของคุณโดยตรง
+# ใช้ URL ของคุณ
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -21,16 +21,18 @@ st.sidebar.title("📌 Menu")
 menu = st.sidebar.radio("ไปที่หน้า:", ["💰 บันทึกค่าใช้จ่าย", "📍 แผนการเดินทาง", "📊 สรุปยอดรวม"])
 
 # ---------------------------------------------------------
-# หน้า: บันทึกค่าใช้จ่าย (เชื่อมกับหน้าแรก gid=0)
+# หน้า: บันทึกค่าใช้จ่าย
 # ---------------------------------------------------------
 if menu == "💰 บันทึกค่าใช้จ่าย":
     st.title("💰 Expense Tracker")
     
-    # ดึงข้อมูลจาก Sheet หน้าแรก
+    # แก้ไขตรงนี้: ลองดึงข้อมูลโดยระบุชื่อหน้าตรงๆ หรือใช้ Index 0
     try:
-        existing_data = conn.read(spreadsheet=SHEET_URL, worksheet="0", ttl=0)
-    except:
-        existing_data = pd.DataFrame()
+        # ลองดึงจากหน้าแรกสุด (Index 0) โดยไม่ใส่เครื่องหมายคำพูด
+        existing_data = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0)
+    except Exception as e:
+        st.error(f"Error reading data: {e}")
+        existing_data = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category"])
 
     with st.form("expense_form", clear_on_submit=True):
         st.subheader("➕ เพิ่มรายการใหม่")
@@ -61,8 +63,11 @@ if menu == "💰 บันทึกค่าใช้จ่าย":
                     "Category": category
                 }])
                 
+                # รวมข้อมูลเก่าและใหม่
                 updated_df = pd.concat([existing_data, new_row], ignore_index=True)
-                conn.update(spreadsheet=SHEET_URL, data=updated_df)
+                
+                # บันทึกกลับไปยังหน้าแรก (worksheet=0)
+                conn.update(spreadsheet=SHEET_URL, worksheet=0, data=updated_df)
                 
                 st.success(f"บันทึก '{item}' เรียบร้อยแล้ว!")
                 st.rerun()
@@ -70,21 +75,25 @@ if menu == "💰 บันทึกค่าใช้จ่าย":
     st.divider()
     st.subheader("📝 รายการทั้งหมด")
     if not existing_data.empty:
-        st.dataframe(existing_data.sort_index(ascending=False), use_container_width=True)
+        # กรองแถวที่ว่างออก (ถ้ามี)
+        display_df = existing_data.dropna(how='all')
+        st.dataframe(display_df.sort_index(ascending=False), use_container_width=True)
     else:
-        st.info("ยังไม่มีข้อมูลบันทึกไว้")
+        st.info("ยังไม่มีข้อมูลบันทึกไว้ในระบบ")
 
 # ---------------------------------------------------------
-# หน้า: แผนการเดินทาง (เชื่อมกับ gid=1784624804)
+# หน้า: แผนการเดินทาง
 # ---------------------------------------------------------
 elif menu == "📍 แผนการเดินทาง":
     st.title("📍 Travel Plan")
     
     try:
-        # ดึงข้อมูลโดยระบุ gid ของหน้า Itinerary
+        # ดึงข้อมูลจาก gid ของ Itinerary (ใช้ชื่อหน้า Itinerary จะชัวร์กว่าเลข gid ในบางกรณี)
+        # ลองเปลี่ยน worksheet เป็นชื่อหน้าจริงๆ เช่น worksheet="Itinerary" ถ้าเลข gid ไม่ทำงาน
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0)
         
         if not df_plan.empty:
+            df_plan = df_plan.dropna(subset=['Day', 'Location'], how='all')
             for day in df_plan['Day'].unique():
                 with st.expander(f"📅 วันที่ {day}", expanded=True):
                     daily_items = df_plan[df_plan['Day'] == day]
@@ -95,7 +104,7 @@ elif menu == "📍 แผนการเดินทาง":
         else:
             st.warning("ไม่พบข้อมูลในหน้า Itinerary")
     except Exception as e:
-        st.error(f"ไม่สามารถดึงข้อมูลได้ ตรวจสอบชื่อหัวตาราง (Day, Time, Location, Note)")
+        st.error(f"ไม่สามารถดึงข้อมูลได้: {e}")
 
 # ---------------------------------------------------------
 # หน้า: สรุปยอดรวม
@@ -104,7 +113,9 @@ elif menu == "📊 สรุปยอดรวม":
     st.title("📊 Settlement Summary")
     
     try:
-        df_exp = conn.read(spreadsheet=SHEET_URL, worksheet="0", ttl=0)
+        df_exp = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0)
+        df_exp = df_exp.dropna(subset=['Amount_HKD']) # กรองเฉพาะแถวที่มีตัวเลข
+        
         if not df_exp.empty:
             total_spent = df_exp['Amount_HKD'].sum()
             st.metric("ยอดรวมค่าใช้จ่ายทั้งหมด", f"{total_spent:,.2f} HKD")
@@ -115,5 +126,5 @@ elif menu == "📊 สรุปยอดรวม":
             st.dataframe(summary)
         else:
             st.info("ยังไม่มีข้อมูลค่าใช้จ่าย")
-    except:
-        st.error("เกิดข้อผิดพลาดในการคำนวณ")
+    except Exception as e:
+        st.error(f"เกิดข้อผิดพลาดในการคำนวณ: {e}")
