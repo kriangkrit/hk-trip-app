@@ -9,38 +9,60 @@ st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered"
 
 st.markdown("""
     <style>
-    /* Force Fonts: Anuphan for Thai, Montserrat for English */
+    /* Import Anuphan (Thai Sans-Serif) and Montserrat (English/Numbers) */
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
-    html, body, [class*="css"], .stMarkdown, p, span, div, table, td, th { 
-        font-family: 'Anuphan', 'Montserrat', sans-serif !important; 
-        font-weight: 300 !important;
+    html, body, [class*="css"] { 
+        font-family: 'Anuphan', 'Montserrat', sans-serif; 
         color: #444;
+        font-weight: 200; /* Set overall weight to Thin */
     }
 
-    h1, h2, h3 { font-weight: 300 !important; letter-spacing: 1px; color: #222; }
+    h1 { 
+        font-weight: 300 !important; 
+        letter-spacing: 2px;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        text-transform: uppercase;
+    }
 
-    /* Buttons Style */
+    /* Buttons: Rounded & Light Border */
     .stButton>button {
         border-radius: 12px;
         border: 0.5px solid #eee;
         background-color: #ffffff;
+        font-weight: 300;
+        letter-spacing: 0.5px;
         transition: all 0.3s ease;
     }
-    .stButton>button:hover { border-color: #000; background-color: #fafafa; }
+    .stButton>button:hover { 
+        border-color: #000; 
+        color: #000;
+        background-color: #fafafa;
+    }
 
-    /* Minimal Inputs (Hide +/- Buttons) */
-    button.step-up, button.step-down { display: none !important; }
-    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
+    /* Inputs: Hide +/- and Minimalist Borders */
+    button.step-up, button.step-down { display: none; }
+    div[data-baseweb="input"] {
+        border-radius: 8px;
+        border: 0.5px solid #f0f0f0;
+    }
 
-    /* Metrics Styling */
-    [data-testid="stMetricValue"] { font-weight: 200 !important; font-size: 2.2rem !important; }
+    /* Metrics: Thin and Large */
+    [data-testid="stMetricValue"] { 
+        font-weight: 200 !important; 
+        font-size: 2.2rem !important;
+        letter-spacing: -1px;
+    }
     
-    /* Hide Streamlit Default UI */
+    /* Clean up Streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .block-container { padding-top: 2rem; }
+    
+    /* Table Styling */
+    [data-testid="stTable"] { font-weight: 300; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -48,23 +70,16 @@ st.markdown("""
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
-members = ["KK", "Charlie"]
+# Centered Minimal Title
+st.title("HK TRIP 2026")
 
-# Mapping สำหรับแปลงค่าเก่าที่เป็นไทย ให้เป็นอังกฤษ (เพื่อความมินิมอล)
-cat_map = {
-    "อาหาร": "Food", "เครื่องดื่ม": "Drinks", "การเดินทาง": "Transport", 
-    "ช้อปปิ้ง": "Shopping", "ที่พัก": "Hotel", "ตั๋วเครื่องบิน": "Flight", "อื่น ๆ": "Others"
-}
-inv_cat_map = {v: k for k, v in cat_map.items()}
-eng_categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
+tab1, tab2, tab3 = st.tabs(["EXPENSE", "PLAN", "SUMMARY"])
+members = ["KK", "Charlie"]
+categories = ["Food", "Drinks", "Transport", "Shopping", "Accommodation", "Flight", "Others"]
 
 # --- Data Loading ---
 try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
-    # แปลง Category ในตารางให้เป็นอังกฤษทั้งหมด
-    if not df.empty:
-        df['Category'] = df['Category'].replace(cat_map)
     if 'Is_Settled' not in df.columns: df['Is_Settled'] = False
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled"])
@@ -75,14 +90,14 @@ except:
 with tab1:
     with st.expander("➕ ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
-            item = st.text_input("Item", placeholder="e.g. Dim Sum")
+            item = st.text_input("Item", placeholder="e.g., Dim Sum")
             c1, c2 = st.columns(2)
             with c1: 
-                amount = st.number_input("Amount (HKD)", min_value=1, value=None, step=1, placeholder="0")
+                amount = st.number_input("Price (HKD)", min_value=1, value=None, step=1, placeholder="0")
             with c2: 
                 payer = st.selectbox("Payer", members)
             
-            cat = st.selectbox("Category", eng_categories)
+            cat = st.selectbox("Category", categories)
             parts = st.multiselect("Split with", members, default=members)
             settled = st.checkbox("Settled (Pre-paid)")
             
@@ -90,9 +105,12 @@ with tab1:
                 if item and amount and parts:
                     new_row = pd.DataFrame([{
                         "Timestamp": datetime.now().strftime("%y-%m-%d %H:%M"), 
-                        "Item": item, "Amount_HKD": float(amount), 
-                        "Payer": payer, "Participants": ", ".join(parts), 
-                        "Category": cat, "Is_Settled": settled
+                        "Item": item, 
+                        "Amount_HKD": float(amount), 
+                        "Payer": payer, 
+                        "Participants": ", ".join(parts), 
+                        "Category": cat, 
+                        "Is_Settled": settled
                     }])
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
                     st.rerun()
@@ -100,7 +118,7 @@ with tab1:
     if not df.empty:
         with st.expander("✏️ EDIT"):
             list_edit = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
-            sel_edit = st.selectbox("Select to edit", ["-- Select --"] + list_edit)
+            sel_edit = st.selectbox("Select Item", ["-- Select --"] + list_edit)
             if sel_edit != "-- Select --":
                 idx = int(sel_edit.split(":")[0])
                 r = df.iloc[idx]
@@ -109,12 +127,11 @@ with tab1:
                     e_amount = st.number_input("Price", value=float(r['Amount_HKD']), step=1.0)
                     e_payer = st.selectbox("Payer", members, index=members.index(r['Payer']))
                     
-                    # หาลำดับหมวดหมู่เดิม
-                    curr_cat = r['Category'] if r['Category'] in eng_categories else "Others"
-                    e_cat = st.selectbox("Category", eng_categories, index=eng_categories.index(curr_cat))
+                    curr_cat = r['Category'] if r['Category'] in categories else "Others"
+                    e_cat = st.selectbox("Category", categories, index=categories.index(curr_cat))
                     
                     curr_parts = r['Participants'].split(", ")
-                    e_parts = st.multiselect("Split with", members, default=[m for m in curr_parts if m in members])
+                    e_parts = st.multiselect("Split with", members, default=[m for m in current_parts if m in members])
                     e_settled = st.checkbox("Settled", value=bool(r['Is_Settled']))
                     
                     if st.form_submit_button("UPDATE"):
@@ -140,11 +157,14 @@ with tab1:
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
-        for day in df_plan['Day'].unique():
-            st.markdown(f"<p style='font-size:18px; font-weight:300; margin-top:15px;'>DAY {day}</p>", unsafe_allow_html=True)
-            for _, r in df_plan[df_plan['Day'] == day].iterrows():
-                st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{r['Time']} — {r['Location']}</p>", unsafe_allow_html=True)
-    except: st.info("Check 'Itinerary' tab in Sheets.")
+        if not df_plan.empty:
+            for day in df_plan['Day'].unique():
+                st.markdown(f"<p style='font-size:18px; font-weight:300; margin-top:15px;'>DAY {day}</p>", unsafe_allow_html=True)
+                for _, r in df_plan[df_plan['Day'] == day].iterrows():
+                    st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{r['Time']} — {r['Location']}</p>", unsafe_allow_html=True)
+        else:
+            st.info("No data found in 'Itinerary' tab.")
+    except: st.info("Check Google Sheets 'Itinerary' tab.")
 
 # ---------------------------------------------------------
 # TAB 3: SUMMARY
@@ -153,22 +173,18 @@ with tab3:
     rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
     
     if not df.empty:
-        # Donut Chart - ปรับ Font ในกราฟด้วย
+        # Donut Chart with Minimal Font
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig.update_layout(
-            showlegend=True, 
-            margin=dict(t=10, b=10, l=10, r=10),
-            font=dict(family="Anuphan", size=14) # บังคับฟอนต์ในกราฟ
-        )
+        fig.update_layout(showlegend=True, margin=dict(t=10, b=10, l=10, r=10), font=dict(family="Anuphan", size=12))
         st.plotly_chart(fig, use_container_width=True)
 
-        st.markdown("<p style='font-weight:300;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-weight:300; margin-top:20px;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
         cat_table = cat_sum.copy()
         cat_table['THB'] = cat_table['Amount_HKD'] * rate
         st.table(cat_table.style.format({'Amount_HKD': '{:,.0f}', 'THB': '{:,.0f}'}))
 
-        # Settlement
+        # Settlement Logic
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
         df_unsettled = df[df['Is_Settled'] == False]
         bal = {m: 0.0 for m in members}
@@ -185,6 +201,7 @@ with tab3:
         
         if diff > 0.01: st.info(f"Charlie → KK")
         elif diff < -0.01: st.info(f"KK → Charlie")
+        else: st.success("All settled!")
 
         st.write("")
         st.markdown("<p style='font-weight:300;'>NET SPEND PER PERSON</p>", unsafe_allow_html=True)
