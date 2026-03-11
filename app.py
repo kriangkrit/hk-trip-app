@@ -37,7 +37,7 @@ with tab1:
                 amount = st.number_input("ราคา (HKD)", min_value=0.0, step=0.1)
             with col2:
                 payer = st.selectbox("ใครจ่าย?", members)
-                category = st.selectbox("หมวดหมู่", ["ที่พัก", "ตั๋วเครื่องบิน", "อาหาร/เครื่องดื่ม", "การเดินทาง", "ช้อปปิ้ง", "อื่น ๆ"])
+                category = st.selectbox("หมวดหมู่", ["อาหาร", "เครื่องดื่ม", "การเดินทาง", "ช้อปปิ้ง", "ที่พัก","ตั๋วเครื่องบิน", "อื่น ๆ"])
             
             participants = st.multiselect("หารกับใครบ้าง?", members, default=members)
             is_settled = st.checkbox("จ่ายจบไปแล้ว (ไม่นำมาคำนวณยอดโอนคืน)")
@@ -119,7 +119,7 @@ with tab3:
                     actual_expense[p] += share
 
         st.divider()
-        st.write("### 💰 ยอดที่ต้องโอนคืนกัน (เฉพาะหน้างาน)")
+        st.write("### 💰 ยอดที่ต้องโอนคืนกัน")
         diff_hkd = total_paid["KK"] - actual_expense["KK"]
         diff_thb = abs(diff_hkd) * exch_rate
         
