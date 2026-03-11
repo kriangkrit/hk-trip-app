@@ -9,7 +9,7 @@ st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered"
 
 st.markdown("""
     <style>
-    /* Force Fonts: Anuphan for Thai (No head), Montserrat for English/Numbers */
+    /* Force Fonts: Anuphan for Thai, Montserrat for English/Numbers */
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
     html, body, [class*="css"], .stMarkdown, p, span, div, table, td, th { 
@@ -20,7 +20,10 @@ st.markdown("""
 
     h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; }
 
-    /* Modern Buttons */
+    /* Fix Icon Artifacts (ตัวที่ทำให้ขึ้น arrow_down) */
+    .st-emotion-cache-p4m0vl { display: none !important; }
+    
+    /* Buttons Style */
     .stButton>button {
         border-radius: 12px;
         border: 0.5px solid #eee;
@@ -36,7 +39,7 @@ st.markdown("""
 
     [data-testid="stMetricValue"] { font-weight: 200 !important; font-size: 2.2rem !important; }
     
-    /* Hide Default UI */
+    /* Hide Streamlit Default UI */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
@@ -52,7 +55,7 @@ st.title("HK TRIP 2026")
 
 tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
-categories = ["Food", "Drinks", "Transport", "Shopping", "Accommodation", "Flight", "Others"]
+categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
 # --- Data Loading ---
 try:
@@ -90,11 +93,11 @@ with tab1:
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
                     st.rerun()
 
-    # 2. EDIT (Fixed Logic & Submit Button)
+    # 2. EDIT
     if not df.empty:
         with st.expander("✏️ EDIT"):
             list_edit = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
-            sel_edit = st.selectbox("Select to edit", ["-- Select --"] + list_edit)
+            sel_edit = st.selectbox("Select Item", ["-- Select --"] + list_edit)
             if sel_edit != "-- Select --":
                 idx = int(sel_edit.split(":")[0])
                 r = df.iloc[idx]
@@ -106,12 +109,10 @@ with tab1:
                     curr_cat = r['Category'] if r['Category'] in categories else "Others"
                     e_cat = st.selectbox("Category", categories, index=categories.index(curr_cat))
                     
-                    # FIXED: Define current_parts_list clearly
                     current_parts_list = str(r['Participants']).split(", ")
                     e_parts = st.multiselect("Split with", members, default=[m for m in current_parts_list if m in members])
                     e_settled = st.checkbox("Settled", value=bool(r['Is_Settled']))
                     
-                    # FIXED: Added missing submit button
                     if st.form_submit_button("UPDATE"):
                         df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'], df.at[idx, 'Payer'] = e_item, e_amount, e_payer
                         df.at[idx, 'Category'], df.at[idx, 'Participants'], df.at[idx, 'Is_Settled'] = e_cat, ", ".join(e_parts), e_settled
@@ -141,8 +142,7 @@ with tab2:
                 st.markdown(f"<p style='font-size:18px; font-weight:300; margin-top:15px;'>DAY {day}</p>", unsafe_allow_html=True)
                 for _, r in df_plan[df_plan['Day'] == day].iterrows():
                     st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{r['Time']} — {r['Location']}</p>", unsafe_allow_html=True)
-        else: st.info("No data found.")
-    except: st.info("Check Google Sheets 'Itinerary' tab.")
+    except: st.info("Check 'Itinerary' tab in Sheets.")
 
 # ---------------------------------------------------------
 # TAB 3: SUMMARY
@@ -156,12 +156,11 @@ with tab3:
         fig.update_layout(showlegend=True, margin=dict(t=10, b=10, l=10, r=10), font=dict(family="Anuphan", size=14))
         st.plotly_chart(fig, use_container_width=True)
 
-        st.markdown("<p style='font-weight:300; margin-top:20px;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-weight:300;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
         cat_table = cat_sum.copy()
         cat_table['THB'] = cat_table['Amount_HKD'] * rate
         st.table(cat_table.style.format({'Amount_HKD': '{:,.0f}', 'THB': '{:,.0f}'}))
 
-        # Settlement Calculation
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
         df_unsettled = df[df['Is_Settled'] == False]
         bal = {m: 0.0 for m in members}
@@ -178,7 +177,6 @@ with tab3:
         
         if diff > 0.01: st.info(f"Charlie → KK")
         elif diff < -0.01: st.info(f"KK → Charlie")
-        else: st.success("All settled!")
 
         st.write("")
         st.markdown("<p style='font-weight:300;'>NET SPEND PER PERSON</p>", unsafe_allow_html=True)
@@ -188,4 +186,4 @@ with tab3:
             for p in p_list: usage[p] += (float(r['Amount_HKD']) / len(p_list))
         
         usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
-        st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
+        st.table(usage_df.style.format({'HKD': '{:,.0f}', 'THB': '{:,.0f}'}))
