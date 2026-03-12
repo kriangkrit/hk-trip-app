@@ -17,7 +17,6 @@ st.markdown("""
         color: #444;
     }
 
-    /* FIX: Hide artifacts */
     summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
     summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
     svg[data-testid="stExpanderIcon"] { display: none !important; }
@@ -32,6 +31,9 @@ st.markdown("""
     .block-container { padding-top: 2rem; }
     
     div[data-testid="stExpander"] { border: 1px solid #f9f9f9 !important; border-radius: 12px !important; margin-bottom: 10px; }
+    
+    /* สไตล์สำหรับลิสต์รายการเล็กๆ */
+    .item-list { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.4; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -54,7 +56,7 @@ try:
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled"])
 
-# --- TAB 1 & 2: (เหมือนเดิม) ---
+# --- TAB 1 & 2 (คงเดิม) ---
 with tab1:
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
@@ -101,10 +103,10 @@ with tab2:
                 st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{r['Time']} — {r['Location']}</p>", unsafe_allow_html=True)
     except: st.info("Check Sheets.")
 
-# --- TAB 3: SUMMARY (แบบอัปเดตใหม่) ---
+# --- TAB 3: SUMMARY (เพิ่มรายละเอียดรายการจ่าย) ---
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
-        # 1. Graph (Donut Chart)
+        # 1. Graph & Breakdown
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         cat_sum = cat_sum[cat_sum['Amount_HKD'] > 0]
         
@@ -118,10 +120,9 @@ with tab3:
             
             st.divider()
 
-            # 2. Rate & Settlement Section (ส่วนคำนวณเงิน)
+            # 2. Rate & Settlement
             rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
             
-            # คำนวณยอดโอน (เฉพาะที่ยังไม่ Settled)
             df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
             bal = {m: 0.0 for m in members}
             for _, r in df[df['Is_Settled'] == False].iterrows():
@@ -138,18 +139,32 @@ with tab3:
             if diff > 0.01: st.info("Charlie → KK")
             elif diff < -0.01: st.info("KK → Charlie")
 
-            st.write("")
+            # --- 3. ขีดเส้นแบ่งและส่วน NET SPEND PER PERSON พร้อมรายละเอียด ---
+            st.markdown("<hr style='border: 0.5px solid #eee; margin-top: 30px; margin-bottom: 20px;'>", unsafe_allow_html=True)
+            st.markdown("<p style='font-weight:300; text-align:center; letter-spacing: 1px;'>NET SPEND PER PERSON</p>", unsafe_allow_html=True)
             
-            # 3. กลับมาแล้ว! สรุปยอดจ่ายจริงรายคน (รวม Settled และ Unsettled)
-            st.markdown("<p style='font-weight:300; text-align:center;'>NET SPEND PER PERSON</p>", unsafe_allow_html=True)
             usage = {m: 0.0 for m in members}
+            user_items = {m: [] for m in members} # เก็บลิสต์รายการที่แต่ละคนต้องจ่าย
+            
             for _, r in df.iterrows():
                 p_list = str(r['Participants']).split(", ")
+                share = float(r['Amount_HKD']) / len(p_list)
                 for p in p_list: 
-                    if p in usage: usage[p] += (float(r['Amount_HKD']) / len(p_list))
+                    if p in usage: 
+                        usage[p] += share
+                        user_items[p].append(f"{r['Item']} ({share:,.0f})")
             
+            # แสดงตารางสรุป
             usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
             st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
+            
+            # เพิ่มส่วนรายละเอียดรายการเล็กๆ ด้านล่างตาราง
+            cols = st.columns(len(members))
+            for i, m in enumerate(members):
+                with cols[i]:
+                    st.markdown(f"<p style='font-size:13px; font-weight:400; color:#444;'>{m}'s Items:</p>", unsafe_allow_html=True)
+                    items_text = " • " + "<br> • ".join(user_items[m]) if user_items[m] else "No items"
+                    st.markdown(f"<div class='item-list'>{items_text}</div>", unsafe_allow_html=True)
             
     else:
         st.info("No data.")
