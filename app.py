@@ -56,9 +56,9 @@ try:
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled"])
 
-# --- TAB 1: EXPENSE (Rearranged Order) ---
+# --- TAB 1: EXPENSE ---
 with tab1:
-    # 1. ADD NEW (Top)
+    # 1. ADD NEW
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
             item = st.text_input("Item", placeholder="e.g. Dim Sum")
@@ -76,7 +76,7 @@ with tab1:
                     st.rerun()
 
     if not df.empty:
-        # 2. EDIT (Middle)
+        # 2. EDIT
         with st.expander("EDIT"):
             list_edit = [f"{i}: {r['Item']}" for i, r in df.iterrows()]
             sel_edit = st.selectbox("Select Item to Edit", ["-- Select --"] + list_edit)
@@ -91,9 +91,8 @@ with tab1:
                         df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'], df.at[idx, 'Category'] = e_item, e_amount, e_cat
                         conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df); st.rerun()
 
-        # 3. DELETE (Middle)
+        # 3. DELETE (Fixed NameError)
         with st.expander("DELETE"):
-            # FIXED: Correct variable name from 'row' to 'r_del' in list comprehension
             list_del = [f"{i}: {r_del['Item']}" for i, r_del in df.iterrows()]
             sel_del = st.selectbox("Choose item to remove", ["-- Select --"] + list_del)
             if sel_del != "-- Select --" and st.button("CONFIRM DELETE", use_container_width=True):
@@ -101,12 +100,12 @@ with tab1:
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx_to_del).reset_index(drop=True))
                 st.rerun()
 
-        # 4. TABLE (Bottom) - Now includes Timestamp
+        # 4. TABLE (Bottom)
         st.write("")
         display_df = df.sort_index(ascending=False)[['Timestamp', 'Item', 'Amount_HKD', 'Payer', 'Category']]
         st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-# --- TAB 2 & 3 (Same Logic) ---
+# --- TAB 2 & 3: (Same as before) ---
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
