@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import plotly.express as px
 
 # --- Config & Minimalism Style ---
@@ -38,7 +38,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Connection & Setup ---
+# --- Connection ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -52,7 +52,6 @@ try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
-    # เพิ่มคอลัมน์ Note ถ้ายังไม่มีใน Sheets
     if 'Note' not in df.columns: df['Note'] = ""
     if 'Is_Settled' not in df.columns: df['Is_Settled'] = False
 except:
@@ -60,7 +59,6 @@ except:
 
 # --- TAB 1: EXPENSE ---
 with tab1:
-    # 1. ADD NEW (เพิ่มช่อง Note)
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
             item = st.text_input("Item", placeholder="e.g. Dim Sum")
@@ -73,13 +71,13 @@ with tab1:
             settled = st.checkbox("Settled (Pre-paid)")
             if st.form_submit_button("SAVE"):
                 if item and amount is not None:
-                    now = datetime.now().strftime("%d/%m %H:%M")
-                    new_row = pd.DataFrame([{"Timestamp": now, "Item": item, "Amount_HKD": float(amount), "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Note": note, "Is_Settled": settled}])
+                    # บันทึกเวลาแบบละเอียดลง Sheet (GMT+7)
+                    now_full = (datetime.utcnow() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M")
+                    new_row = pd.DataFrame([{"Timestamp": now_full, "Item": item, "Amount_HKD": float(amount), "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Note": note, "Is_Settled": settled}])
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
                     st.rerun()
 
     if not df.empty:
-        # 2. EDIT (เพิ่มช่อง Note ในส่วนแก้ไข)
         with st.expander("EDIT"):
             list_edit = [f"{i}: {r['Item']}" for i, r in df.iterrows()]
             sel_edit = st.selectbox("Select Item to Edit", ["-- Select --"] + list_edit)
@@ -95,7 +93,6 @@ with tab1:
                         df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'], df.at[idx, 'Category'], df.at[idx, 'Note'] = e_item, e_amount, e_cat, e_note
                         conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df); st.rerun()
 
-        # 3. DELETE
         with st.expander("DELETE"):
             list_del = [f"{i}: {r_del['Item']}" for i, r_del in df.iterrows()]
             sel_del = st.selectbox("Choose item to remove", ["-- Select --"] + list_del)
@@ -104,12 +101,12 @@ with tab1:
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx_to_del).reset_index(drop=True))
                 st.rerun()
 
-        # 4. TABLE (แสดงคอลัมน์ Note)
+        # แสดงตารางแบบคลีน (ไม่โชว์ Timestamp ในแอป)
         st.write("")
-        display_df = df.sort_index(ascending=False)[['Timestamp', 'Item', 'Amount_HKD', 'Payer', 'Category', 'Note']]
+        display_df = df.sort_index(ascending=False)[['Item', 'Amount_HKD', 'Payer', 'Category', 'Note']]
         st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-# --- TAB 2 & 3 (คงเดิม) ---
+# --- TAB 2 & 3 (คงเดิมตามบรีฟที่แล้ว) ---
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
