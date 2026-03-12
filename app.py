@@ -32,7 +32,6 @@ st.markdown("""
     
     div[data-testid="stExpander"] { border: 1px solid #f9f9f9 !important; border-radius: 12px !important; margin-bottom: 10px; }
     
-    /* Centered Item List Styling for Columns */
     .centered-item-box { text-align: center; margin-top: 10px; }
     .member-label { font-size: 13px; font-weight: 400; color: #222; margin-bottom: 5px; border-bottom: 0.5px solid #eee; display: inline-block; padding: 0 10px 2px 10px; }
     .item-text-centered { font-size: 11px; color: #888; line-height: 1.5; }
@@ -57,7 +56,7 @@ try:
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled"])
 
-# --- TAB 1 & 2 (เหมือนเดิม) ---
+# --- TAB 1: EXPENSE (เพิ่ม Timestamp ในตาราง) ---
 with tab1:
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
@@ -70,13 +69,20 @@ with tab1:
             settled = st.checkbox("Settled (Pre-paid)")
             if st.form_submit_button("SAVE"):
                 if item and amount is not None:
-                    new_row = pd.DataFrame([{"Timestamp": datetime.now().strftime("%y-%m-%d %H:%M"), "Item": item, "Amount_HKD": float(amount), "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Is_Settled": settled}])
+                    # บันทึกเวลาที่กด Save
+                    now = datetime.now().strftime("%d/%m %H:%M")
+                    new_row = pd.DataFrame([{"Timestamp": now, "Item": item, "Amount_HKD": float(amount), "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Is_Settled": settled}])
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
                     st.rerun()
+    
     if not df.empty:
-        with st.expander("EDIT"):
+        # แสดงตารางพร้อม Timestamp โดยเรียงจากใหม่ไปเก่า
+        display_df = df.sort_index(ascending=False)[['Timestamp', 'Item', 'Amount_HKD', 'Payer', 'Category']]
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+        with st.expander("EDIT / DELETE"):
             list_edit = [f"{i}: {row['Item']}" for i, row in df.iterrows()]
-            sel_edit = st.selectbox("Select Item", ["-- Select --"] + list_edit)
+            sel_edit = st.selectbox("Select Item to Edit/Delete", ["-- Select --"] + list_edit)
             if sel_edit != "-- Select --":
                 idx = int(sel_edit.split(":")[0])
                 r = df.iloc[idx]
@@ -84,17 +90,17 @@ with tab1:
                     e_item = st.text_input("Name", value=r['Item'])
                     e_amount = st.number_input("Price", value=float(r['Amount_HKD']))
                     e_cat = st.selectbox("Category", categories, index=categories.index(r['Category']) if r['Category'] in categories else 0)
-                    if st.form_submit_button("UPDATE"):
-                        df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'], df.at[idx, 'Category'] = e_item, e_amount, e_cat
-                        conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df); st.rerun()
-        with st.expander("DELETE"):
-            sel_del = st.selectbox("Choose item", ["-- Select --"] + [f"{i}: {r['Item']}" for i, r in df.iterrows()])
-            if sel_del != "-- Select --" and st.button("CONFIRM DELETE", use_container_width=True):
-                idx_to_del = int(sel_del.split(":")[0])
-                conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx_to_del).reset_index(drop=True))
-                st.rerun()
-    st.dataframe(df.sort_index(ascending=False)[['Item', 'Amount_HKD', 'Payer', 'Category']], use_container_width=True, hide_index=True)
+                    col_e1, col_e2 = st.columns(2)
+                    with col_e1:
+                        if st.form_submit_button("UPDATE"):
+                            df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'], df.at[idx, 'Category'] = e_item, e_amount, e_cat
+                            conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df); st.rerun()
+                    with col_e2:
+                        if st.form_submit_button("DELETE"):
+                            conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx).reset_index(drop=True))
+                            st.rerun()
 
+# --- TAB 2: PLAN (เหมือนเดิม) ---
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
@@ -104,24 +110,20 @@ with tab2:
                 st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{r['Time']} — {r['Location']}</p>", unsafe_allow_html=True)
     except: st.info("Check Sheets.")
 
-# --- TAB 3: SUMMARY (แบบจัดวางตามบรีฟเป๊ะๆ) ---
+# --- TAB 3: SUMMARY (เป๊ะตามบรีฟล่าสุด) ---
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
-        # 1. Graph
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         cat_sum = cat_sum[cat_sum['Amount_HKD'] > 0]
         if not cat_sum.empty:
             fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
             fig.update_layout(showlegend=True, margin=dict(t=20, b=20, l=10, r=10), font=dict(family="Anuphan", size=14))
             st.plotly_chart(fig, use_container_width=True)
-            
-            # หัวข้อชิดซ้ายปกติ
             st.markdown("<p style='font-weight:300;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
             st.table(cat_sum.style.format({'Amount_HKD': '{:,.0f}'}))
             
             st.divider()
 
-            # 2. Rate & Settlement
             rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
             df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
             bal = {m: 0.0 for m in members}
@@ -138,9 +140,7 @@ with tab3:
             if diff > 0.01: st.info("Charlie → KK")
             elif diff < -0.01: st.info("KK → Charlie")
 
-            # 3. NET SPEND & Itemized Lists (Centered Columns)
             st.markdown("<hr style='border: 0.5px solid #eee; margin-top: 30px; margin-bottom: 20px;'>", unsafe_allow_html=True)
-            # หัวข้อชิดซ้ายปกติ
             st.markdown("<p style='font-weight:300;'>NET SPEND PER PERSON</p>", unsafe_allow_html=True)
             
             usage = {m: 0.0 for m in members}
@@ -158,28 +158,10 @@ with tab3:
             
             st.write("")
             
-            # FIXED: KK's Items และ Charlie's Items อยู่คู่กันและจัดกลางเนื้อหา
             col_left, col_right = st.columns(2)
-            
             with col_left:
-                st.markdown(f"""
-                    <div class="centered-item-box">
-                        <div class="member-label">KK's Items</div>
-                        <div class="item-text-centered">
-                            {' • ' + ' <br> • '.join(user_items["KK"]) if user_items["KK"] else 'No items'}
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
-                
+                st.markdown(f"""<div class="centered-item-box"><div class="member-label">KK's Items</div><div class="item-text-centered">{' • ' + ' <br> • '.join(user_items["KK"]) if user_items["KK"] else 'No items'}</div></div>""", unsafe_allow_html=True)
             with col_right:
-                st.markdown(f"""
-                    <div class="centered-item-box">
-                        <div class="member-label">Charlie's Items</div>
-                        <div class="item-text-centered">
-                            {' • ' + ' <br> • '.join(user_items["Charlie"]) if user_items["Charlie"] else 'No items'}
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
-            
+                st.markdown(f"""<div class="centered-item-box"><div class="member-label">Charlie's Items</div><div class="item-text-centered">{' • ' + ' <br> • '.join(user_items["Charlie"]) if user_items["Charlie"] else 'No items'}</div></div>""", unsafe_allow_html=True)
     else:
         st.info("No data.")
