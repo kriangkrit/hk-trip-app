@@ -32,17 +32,18 @@ st.markdown("""
     
     div[data-testid="stExpander"] { border: 1px solid #f9f9f9 !important; border-radius: 12px !important; margin-bottom: 10px; }
     
-    /* สไตล์สำหรับลิสต์รายการเล็กๆ */
-    .item-list { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.4; }
+    /* Centered Item List Styling */
+    .centered-container { text-align: center; margin-bottom: 25px; }
+    .member-name { font-size: 14px; font-weight: 400; color: #222; margin-bottom: 8px; border-bottom: 0.5px solid #eee; display: inline-block; padding: 0 15px 3px 15px; }
+    .item-list-centered { font-size: 12px; color: #888; line-height: 1.6; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- Connection ---
+# --- Connection & Setup (Same as before) ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 st.title("HK TRIP 2026")
-
 tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
@@ -56,7 +57,7 @@ try:
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled"])
 
-# --- TAB 1 & 2 (คงเดิม) ---
+# --- TAB 1 & 2 (Keep as is) ---
 with tab1:
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
@@ -87,7 +88,7 @@ with tab1:
                         df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'], df.at[idx, 'Category'] = e_item, e_amount, e_cat
                         conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df); st.rerun()
         with st.expander("DELETE"):
-            sel_del = st.selectbox("Choose item to remove", ["-- Select --"] + [f"{i}: {r['Item']}" for i, r in df.iterrows()])
+            sel_del = st.selectbox("Choose item", ["-- Select --"] + [f"{i}: {r['Item']}" for i, r in df.iterrows()])
             if sel_del != "-- Select --" and st.button("CONFIRM DELETE", use_container_width=True):
                 idx_to_del = int(sel_del.split(":")[0])
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx_to_del).reset_index(drop=True))
@@ -103,26 +104,23 @@ with tab2:
                 st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{r['Time']} — {r['Location']}</p>", unsafe_allow_html=True)
     except: st.info("Check Sheets.")
 
-# --- TAB 3: SUMMARY (เพิ่มรายละเอียดรายการจ่าย) ---
+# --- TAB 3: SUMMARY (Centered Items) ---
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
-        # 1. Graph & Breakdown
+        # 1. Chart & Breakdown Table
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         cat_sum = cat_sum[cat_sum['Amount_HKD'] > 0]
-        
         if not cat_sum.empty:
             fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
             fig.update_layout(showlegend=True, margin=dict(t=20, b=20, l=10, r=10), font=dict(family="Anuphan", size=14))
             st.plotly_chart(fig, use_container_width=True)
-            
-            st.markdown("<p style='font-weight:300;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-weight:300; text-align:center;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
             st.table(cat_sum.style.format({'Amount_HKD': '{:,.0f}'}))
             
             st.divider()
 
             # 2. Rate & Settlement
             rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
-            
             df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
             bal = {m: 0.0 for m in members}
             for _, r in df[df['Is_Settled'] == False].iterrows():
@@ -135,17 +133,15 @@ with tab3:
             c1, c2 = st.columns(2)
             c1.metric("TRANSFER (HKD)", f"{abs(diff):,.2f}")
             c2.metric("TRANSFER (THB)", f"{abs(diff)*rate:,.0f}")
-            
             if diff > 0.01: st.info("Charlie → KK")
             elif diff < -0.01: st.info("KK → Charlie")
 
-            # --- 3. ขีดเส้นแบ่งและส่วน NET SPEND PER PERSON พร้อมรายละเอียด ---
+            # 3. Centered Net Spend & Itemized Lists
             st.markdown("<hr style='border: 0.5px solid #eee; margin-top: 30px; margin-bottom: 20px;'>", unsafe_allow_html=True)
             st.markdown("<p style='font-weight:300; text-align:center; letter-spacing: 1px;'>NET SPEND PER PERSON</p>", unsafe_allow_html=True)
             
             usage = {m: 0.0 for m in members}
-            user_items = {m: [] for m in members} # เก็บลิสต์รายการที่แต่ละคนต้องจ่าย
-            
+            user_items = {m: [] for m in members}
             for _, r in df.iterrows():
                 p_list = str(r['Participants']).split(", ")
                 share = float(r['Amount_HKD']) / len(p_list)
@@ -154,17 +150,22 @@ with tab3:
                         usage[p] += share
                         user_items[p].append(f"{r['Item']} ({share:,.0f})")
             
-            # แสดงตารางสรุป
+            # ตารางสรุปยอด (Center ในตัวตาราง)
             usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
             st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
             
-            # เพิ่มส่วนรายละเอียดรายการเล็กๆ ด้านล่างตาราง
-            cols = st.columns(len(members))
-            for i, m in enumerate(members):
-                with cols[i]:
-                    st.markdown(f"<p style='font-size:13px; font-weight:400; color:#444;'>{m}'s Items:</p>", unsafe_allow_html=True)
-                    items_text = " • " + "<br> • ".join(user_items[m]) if user_items[m] else "No items"
-                    st.markdown(f"<div class='item-list'>{items_text}</div>", unsafe_allow_html=True)
+            st.write("")
+            
+            # FIXED: จัดวาง Items แบบอยู่ตรงกลางรายบุคคล
+            for m in members:
+                st.markdown(f"""
+                    <div class="centered-container">
+                        <div class="member-name">{m}'s Items</div>
+                        <div class="item-list-centered">
+                            {' • ' + ' <br> • '.join(user_items[m]) if user_items[m] else 'No items'}
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
             
     else:
         st.info("No data.")
