@@ -52,31 +52,34 @@ try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
+    # เพิ่มคอลัมน์ Note ถ้ายังไม่มีใน Sheets
+    if 'Note' not in df.columns: df['Note'] = ""
     if 'Is_Settled' not in df.columns: df['Is_Settled'] = False
 except:
-    df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled"])
+    df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Note", "Is_Settled"])
 
 # --- TAB 1: EXPENSE ---
 with tab1:
-    # 1. ADD NEW
+    # 1. ADD NEW (เพิ่มช่อง Note)
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
             item = st.text_input("Item", placeholder="e.g. Dim Sum")
             c1, c2 = st.columns(2)
-            with c1: amount = st.number_input("Price (HKD)", min_value=0, value=None, step=1)
+            with c1: amount = st.number_input("Price (HKD)", min_value=0.0, value=None, step=1.0)
             with c2: payer = st.selectbox("Payer", members)
             cat = st.selectbox("Category", categories)
             parts = st.multiselect("Split with", members, default=members)
+            note = st.text_input("Note (Optional)", placeholder="เพิ่มเติม...")
             settled = st.checkbox("Settled (Pre-paid)")
             if st.form_submit_button("SAVE"):
                 if item and amount is not None:
                     now = datetime.now().strftime("%d/%m %H:%M")
-                    new_row = pd.DataFrame([{"Timestamp": now, "Item": item, "Amount_HKD": float(amount), "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Is_Settled": settled}])
+                    new_row = pd.DataFrame([{"Timestamp": now, "Item": item, "Amount_HKD": float(amount), "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Note": note, "Is_Settled": settled}])
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
                     st.rerun()
 
     if not df.empty:
-        # 2. EDIT
+        # 2. EDIT (เพิ่มช่อง Note ในส่วนแก้ไข)
         with st.expander("EDIT"):
             list_edit = [f"{i}: {r['Item']}" for i, r in df.iterrows()]
             sel_edit = st.selectbox("Select Item to Edit", ["-- Select --"] + list_edit)
@@ -87,11 +90,12 @@ with tab1:
                     e_item = st.text_input("Name", value=r['Item'])
                     e_amount = st.number_input("Price", value=float(r['Amount_HKD']))
                     e_cat = st.selectbox("Category", categories, index=categories.index(r['Category']) if r['Category'] in categories else 0)
+                    e_note = st.text_input("Note", value=r['Note'] if pd.notna(r['Note']) else "")
                     if st.form_submit_button("UPDATE"):
-                        df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'], df.at[idx, 'Category'] = e_item, e_amount, e_cat
+                        df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'], df.at[idx, 'Category'], df.at[idx, 'Note'] = e_item, e_amount, e_cat, e_note
                         conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df); st.rerun()
 
-        # 3. DELETE (Fixed NameError)
+        # 3. DELETE
         with st.expander("DELETE"):
             list_del = [f"{i}: {r_del['Item']}" for i, r_del in df.iterrows()]
             sel_del = st.selectbox("Choose item to remove", ["-- Select --"] + list_del)
@@ -100,12 +104,12 @@ with tab1:
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx_to_del).reset_index(drop=True))
                 st.rerun()
 
-        # 4. TABLE (Bottom)
+        # 4. TABLE (แสดงคอลัมน์ Note)
         st.write("")
-        display_df = df.sort_index(ascending=False)[['Timestamp', 'Item', 'Amount_HKD', 'Payer', 'Category']]
+        display_df = df.sort_index(ascending=False)[['Timestamp', 'Item', 'Amount_HKD', 'Payer', 'Category', 'Note']]
         st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-# --- TAB 2 & 3: (Same as before) ---
+# --- TAB 2 & 3 (คงเดิม) ---
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
