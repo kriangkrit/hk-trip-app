@@ -32,14 +32,14 @@ st.markdown("""
     
     div[data-testid="stExpander"] { border: 1px solid #f9f9f9 !important; border-radius: 12px !important; margin-bottom: 10px; }
     
-    /* Centered Item List Styling */
-    .centered-container { text-align: center; margin-bottom: 25px; }
-    .member-name { font-size: 14px; font-weight: 400; color: #222; margin-bottom: 8px; border-bottom: 0.5px solid #eee; display: inline-block; padding: 0 15px 3px 15px; }
-    .item-list-centered { font-size: 12px; color: #888; line-height: 1.6; }
+    /* Centered Item List Styling for Columns */
+    .centered-item-box { text-align: center; margin-top: 10px; }
+    .member-label { font-size: 13px; font-weight: 400; color: #222; margin-bottom: 5px; border-bottom: 0.5px solid #eee; display: inline-block; padding: 0 10px 2px 10px; }
+    .item-text-centered { font-size: 11px; color: #888; line-height: 1.5; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- Connection & Setup (Same as before) ---
+# --- Connection & Setup ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -57,7 +57,7 @@ try:
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled"])
 
-# --- TAB 1 & 2 (Keep as is) ---
+# --- TAB 1 & 2 (เหมือนเดิม) ---
 with tab1:
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
@@ -104,17 +104,19 @@ with tab2:
                 st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{r['Time']} — {r['Location']}</p>", unsafe_allow_html=True)
     except: st.info("Check Sheets.")
 
-# --- TAB 3: SUMMARY (Centered Items) ---
+# --- TAB 3: SUMMARY (แบบจัดวางตามบรีฟเป๊ะๆ) ---
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
-        # 1. Chart & Breakdown Table
+        # 1. Graph
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         cat_sum = cat_sum[cat_sum['Amount_HKD'] > 0]
         if not cat_sum.empty:
             fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
             fig.update_layout(showlegend=True, margin=dict(t=20, b=20, l=10, r=10), font=dict(family="Anuphan", size=14))
             st.plotly_chart(fig, use_container_width=True)
-            st.markdown("<p style='font-weight:300; text-align:center;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
+            
+            # หัวข้อชิดซ้ายปกติ
+            st.markdown("<p style='font-weight:300;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
             st.table(cat_sum.style.format({'Amount_HKD': '{:,.0f}'}))
             
             st.divider()
@@ -136,9 +138,10 @@ with tab3:
             if diff > 0.01: st.info("Charlie → KK")
             elif diff < -0.01: st.info("KK → Charlie")
 
-            # 3. Centered Net Spend & Itemized Lists
+            # 3. NET SPEND & Itemized Lists (Centered Columns)
             st.markdown("<hr style='border: 0.5px solid #eee; margin-top: 30px; margin-bottom: 20px;'>", unsafe_allow_html=True)
-            st.markdown("<p style='font-weight:300; text-align:center; letter-spacing: 1px;'>NET SPEND PER PERSON</p>", unsafe_allow_html=True)
+            # หัวข้อชิดซ้ายปกติ
+            st.markdown("<p style='font-weight:300;'>NET SPEND PER PERSON</p>", unsafe_allow_html=True)
             
             usage = {m: 0.0 for m in members}
             user_items = {m: [] for m in members}
@@ -150,19 +153,30 @@ with tab3:
                         usage[p] += share
                         user_items[p].append(f"{r['Item']} ({share:,.0f})")
             
-            # ตารางสรุปยอด (Center ในตัวตาราง)
             usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
             st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
             
             st.write("")
             
-            # FIXED: จัดวาง Items แบบอยู่ตรงกลางรายบุคคล
-            for m in members:
+            # FIXED: KK's Items และ Charlie's Items อยู่คู่กันและจัดกลางเนื้อหา
+            col_left, col_right = st.columns(2)
+            
+            with col_left:
                 st.markdown(f"""
-                    <div class="centered-container">
-                        <div class="member-name">{m}'s Items</div>
-                        <div class="item-list-centered">
-                            {' • ' + ' <br> • '.join(user_items[m]) if user_items[m] else 'No items'}
+                    <div class="centered-item-box">
+                        <div class="member-label">KK's Items</div>
+                        <div class="item-text-centered">
+                            {' • ' + ' <br> • '.join(user_items["KK"]) if user_items["KK"] else 'No items'}
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+            with col_right:
+                st.markdown(f"""
+                    <div class="centered-item-box">
+                        <div class="member-label">Charlie's Items</div>
+                        <div class="item-text-centered">
+                            {' • ' + ' <br> • '.join(user_items["Charlie"]) if user_items["Charlie"] else 'No items'}
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
