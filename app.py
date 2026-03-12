@@ -56,7 +56,7 @@ try:
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled"])
 
-# --- TAB 1: EXPENSE (Rearranged) ---
+# --- TAB 1: EXPENSE (Rearranged Order) ---
 with tab1:
     # 1. ADD NEW (Top)
     with st.expander("ADD NEW", expanded=True):
@@ -78,7 +78,7 @@ with tab1:
     if not df.empty:
         # 2. EDIT (Middle)
         with st.expander("EDIT"):
-            list_edit = [f"{i}: {row['Item']}" for i, row in df.iterrows()]
+            list_edit = [f"{i}: {r['Item']}" for i, r in df.iterrows()]
             sel_edit = st.selectbox("Select Item to Edit", ["-- Select --"] + list_edit)
             if sel_edit != "-- Select --":
                 idx = int(sel_edit.split(":")[0])
@@ -93,18 +93,20 @@ with tab1:
 
         # 3. DELETE (Middle)
         with st.expander("DELETE"):
-            sel_del = st.selectbox("Choose item to remove", ["-- Select --"] + [f"{i}: {r['Item']}" for i, row in df.iterrows()])
+            # FIXED: Correct variable name from 'row' to 'r_del' in list comprehension
+            list_del = [f"{i}: {r_del['Item']}" for i, r_del in df.iterrows()]
+            sel_del = st.selectbox("Choose item to remove", ["-- Select --"] + list_del)
             if sel_del != "-- Select --" and st.button("CONFIRM DELETE", use_container_width=True):
                 idx_to_del = int(sel_del.split(":")[0])
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx_to_del).reset_index(drop=True))
                 st.rerun()
 
-        # 4. TABLE (Bottom)
+        # 4. TABLE (Bottom) - Now includes Timestamp
         st.write("")
         display_df = df.sort_index(ascending=False)[['Timestamp', 'Item', 'Amount_HKD', 'Payer', 'Category']]
         st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-# --- TAB 2 & 3 (Same as before) ---
+# --- TAB 2 & 3 (Same Logic) ---
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
@@ -124,7 +126,6 @@ with tab3:
             st.plotly_chart(fig, use_container_width=True)
             st.markdown("<p style='font-weight:300;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
             st.table(cat_sum.style.format({'Amount_HKD': '{:,.0f}'}))
-            
             st.divider()
 
             rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
