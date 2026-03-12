@@ -9,41 +9,40 @@ st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered"
 
 st.markdown("""
     <style>
-    /* 1. Import Fonts: Anuphan (Thai No-head) & Montserrat (Eng) */
+    /* 1. Import Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
-    html, body, [class*="css"], .stMarkdown, p, span, div, table, td, th { 
+    /* 2. Global Font Setup - ใช้ชื่อ Class เจาะจงเพื่อไม่ให้ทับส่วนอื่น */
+    html, body, [class*="css"], .stMarkdown { 
         font-family: 'Anuphan', 'Montserrat', sans-serif !important; 
         font-weight: 300 !important;
         color: #444;
     }
 
-    /* 2. FIX: กำจัดตัวหนังสือ icon (arrow_down, arrow_right) ที่ซ้อนทับ */
-    /* ซ่อน SVG และตัวอักษร Icon ของระบบทั้งหมดใน Expander */
-    [data-testid="stExpanderIcon"], 
-    [class*="st-emotion-cache"] svg,
-    .st-emotion-cache-p4m0vl,
+    /* 3. FINAL FIX: กำจัดตัวหนังสือ icon (arrow_down, edit) แบบถอนรากถอนโคน */
+    /* ซ่อนไอคอนระบบของ Expander */
+    svg[data-testid="stExpanderIcon"] { display: none !important; }
+    
+    /* ซ่อนตัวอักษร Icon ที่หลุดออกมาทับคำว่า ADD NEW / EDIT */
+    span[data-testid="stHeaderActionElements"], 
+    .st-emotion-cache-p4m0vl, 
     .st-emotion-cache-6q9sum { 
         display: none !important; 
     }
-    
-    /* บังคับซ่อนตัวหนังสือไอคอนที่หลุดออกมาในแถบ Expander Label */
-    summary > span > div > div {
-        font-size: 0 !important;
-        visibility: hidden !important;
-    }
-    summary > span > div > div > p {
-        font-size: 16px !important;
-        visibility: visible !important;
-        font-family: 'Anuphan' !important;
-    }
 
-    /* 3. UI Minimalism */
+    /* เทคนิคซ่อนตัวหนังสือ icon ใน Summary Label */
+    summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
+    summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
+
+    /* 4. UI Minimalism */
     h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
+    
+    /* 5. Graph & Table Fix: ปล่อยให้แสดงผลปกติ */
+    [data-testid="stPlotlyChart"] { font-family: 'Montserrat', sans-serif !important; }
+    
     .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; transition: 0.3s; }
     .stButton>button:hover { border-color: #000; background-color: #fafafa; }
 
-    /* Hide Number Input Buttons & Minimal Borders */
     button.step-up, button.step-down { display: none !important; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
@@ -51,7 +50,6 @@ st.markdown("""
     #MainMenu, footer, header { visibility: hidden; }
     .block-container { padding-top: 2rem; }
     
-    /* ปรับแต่ง Expander ให้ดูเบาบาง */
     div[data-testid="stExpander"] { 
         border: 1px solid #f9f9f9 !important; 
         border-radius: 12px !important; 
@@ -135,17 +133,24 @@ with tab2:
 with tab3:
     rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
     if not df.empty and df['Amount_HKD'].sum() > 0:
+        # กรองข้อมูลก่อนทำกราฟ
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         cat_sum = cat_sum[cat_sum['Amount_HKD'] > 0]
+        
         if not cat_sum.empty:
             fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig.update_layout(showlegend=True, margin=dict(t=20, b=20, l=10, r=10), font=dict(family="Anuphan", size=14))
+            fig.update_layout(
+                showlegend=True, 
+                margin=dict(t=30, b=30, l=10, r=10),
+                font=dict(family="Anuphan", size=14)
+            )
             st.plotly_chart(fig, use_container_width=True)
         
         st.markdown("<p style='font-weight:300;'>BREAKDOWN</p>", unsafe_allow_html=True)
         cat_table = cat_sum.copy(); cat_table['THB'] = cat_table['Amount_HKD'] * rate
         st.table(cat_table.style.format({'Amount_HKD': '{:,.0f}', 'THB': '{:,.0f}'}))
 
+        # Calculation
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
         bal = {m: 0.0 for m in members}
         for _, r in df[df['Is_Settled'] == False].iterrows():
