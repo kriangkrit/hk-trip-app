@@ -71,7 +71,7 @@ with tab1:
             settled = st.checkbox("Settled (Pre-paid)")
             if st.form_submit_button("SAVE"):
                 if item and amount is not None:
-                    # บันทึกเวลาแบบละเอียดลง Sheet (GMT+7)
+                    # บันทึก วัน/เดือน/ปี และ เวลา ลง Sheet (GMT+7)
                     now_full = (datetime.utcnow() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M")
                     new_row = pd.DataFrame([{"Timestamp": now_full, "Item": item, "Amount_HKD": float(amount), "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Note": note, "Is_Settled": settled}])
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
@@ -101,12 +101,17 @@ with tab1:
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx_to_del).reset_index(drop=True))
                 st.rerun()
 
-        # แสดงตารางแบบคลีน (ไม่โชว์ Timestamp ในแอป)
+        # แสดงตาราง (ตัดเหลือแค่วันที่แสดงผลในแอป)
         st.write("")
-        display_df = df.sort_index(ascending=False)[['Item', 'Amount_HKD', 'Payer', 'Category', 'Note']]
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        display_df = df.copy()
+        # แยกช่อง Timestamp เอาเฉพาะส่วนแรก (วันที่) มาแสดง
+        display_df['Date'] = display_df['Timestamp'].str.split().str[0]
+        
+        # จัดเรียงคอลัมน์ใหม่ให้ Date อยู่หน้าสุด
+        final_df = display_df.sort_index(ascending=False)[['Date', 'Item', 'Amount_HKD', 'Payer', 'Category', 'Note']]
+        st.dataframe(final_df, use_container_width=True, hide_index=True)
 
-# --- TAB 2 & 3 (คงเดิมตามบรีฟที่แล้ว) ---
+# --- TAB 2 & 3 (เหมือนเดิม) ---
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
