@@ -17,7 +17,7 @@ st.markdown("""
         color: #444;
     }
 
-    /* FIX: Hide artifacts while keeping Edit/Delete functional */
+    /* FIX: Hide artifacts */
     summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
     summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
     svg[data-testid="stExpanderIcon"] { display: none !important; }
@@ -109,24 +109,7 @@ with tab2:
 # --- TAB 3: SUMMARY ---
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
-        # ดึงยอดเรตไว้ท้ายสุดแต่ต้องกำหนดตัวแปรไว้ใช้คำนวณก่อน
-        # ใช้ลอจิกซ่อนช่องกรอกไว้ด้านล่างสุด
-        
-        # 1. Transfer Calculation (แสดงยอดโอนก่อน)
-        df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
-        bal = {m: 0.0 for m in members}
-        for _, r in df[df['Is_Settled'] == False].iterrows():
-            bal[r['Payer']] += float(r['Amount_HKD'])
-            p_list = str(r['Participants']).split(", ")
-            for p in p_list: 
-                if p in bal: bal[p] -= (float(r['Amount_HKD']) / len(p_list))
-
-        diff = bal["KK"]
-        
-        # ยอด Metric จะยังไม่โชว์ค่า THB จนกว่าจะไปถึงโค้ดส่วน Rate ด้านล่าง 
-        # ดังนั้นผมจะย้ายเฉพาะ "ช่องกรอก" (st.number_input) ไปไว้ข้างล่างครับ
-        
-        # 2. Graph & Breakdown
+        # 1. Graph (Donut Chart)
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         cat_sum = cat_sum[cat_sum['Amount_HKD'] > 0]
         
@@ -137,20 +120,29 @@ with tab3:
             
             st.markdown("<p style='font-weight:300;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
             
-            # --- ย้ายช่อง Rate มาไว้ตรงนี้ ---
-            rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
-            
-            cat_table = cat_sum.copy()
-            cat_table['THB'] = cat_table['Amount_HKD'] * rate
-            st.table(cat_table.style.format({'Amount_HKD': '{:,.0f}', 'THB': '{:,.0f}'}))
+            # 2. Category Table (แสดงค่า HKD ก่อน)
+            st.table(cat_sum.style.format({'Amount_HKD': '{:,.0f}'}))
             
             st.divider()
+
+            # 3. Rate & Settlement Section (ส่วนสรุปเงินไว้ล่างสุด)
+            rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
             
-            # แสดงยอด Transfer ไว้หลัง Breakdown (หรือจะไว้บนสุดแต่ใช้ค่า Rate จากช่องข้างล่างก็ได้ครับ)
-            st.markdown("<p style='font-weight:300; text-align:center;'>SETTLEMENT</p>", unsafe_allow_html=True)
+            # คำนวณยอดโอน
+            df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
+            bal = {m: 0.0 for m in members}
+            for _, r in df[df['Is_Settled'] == False].iterrows():
+                bal[r['Payer']] += float(r['Amount_HKD'])
+                p_list = str(r['Participants']).split(", ")
+                for p in p_list: 
+                    if p in bal: bal[p] -= (float(r['Amount_HKD']) / len(p_list))
+
+            diff = bal["KK"]
+            
             c1, c2 = st.columns(2)
             c1.metric("TRANSFER (HKD)", f"{abs(diff):,.2f}")
             c2.metric("TRANSFER (THB)", f"{abs(diff)*rate:,.0f}")
+            
             if diff > 0.01: st.info("Charlie → KK")
             elif diff < -0.01: st.info("KK → Charlie")
             
