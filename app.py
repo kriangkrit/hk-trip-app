@@ -26,15 +26,42 @@ st.markdown("""
     button.step-up, button.step-down { display: none !important; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
-    [data-testid="stMetricValue"] { font-weight: 200 !important; font-size: 2.2rem !important; }
+    [data-testid="stMetricValue"] { font-weight: 200 !important; font-size: 1.8rem !important; }
     #MainMenu, footer, header { visibility: hidden; }
-    .block-container { padding-top: 2rem; }
+    .block-container { padding-top: 2rem; padding-left: 1rem; padding-right: 1rem; }
     
     div[data-testid="stExpander"] { border: 1px solid #f9f9f9 !important; border-radius: 12px !important; margin-bottom: 10px; }
     
-    .centered-item-box { text-align: center; margin-top: 10px; }
-    .member-label { font-size: 13px; font-weight: 400; color: #222; margin-bottom: 5px; border-bottom: 0.5px solid #eee; display: inline-block; padding: 0 10px 2px 10px; }
-    .item-text-centered { font-size: 11px; color: #888; line-height: 1.5; }
+    /* 📱 Mobile Flexbox: บังคับให้ Items อยู่คู่กันไม่ตกบรรทัด */
+    .mobile-flex-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px; /* ระยะห่างระหว่าง 2 ฝั่ง */
+        width: 100%;
+        margin-top: 15px;
+    }
+    .flex-item-box {
+        flex: 1; /* แบ่งครึ่งหน้าจอเท่ากัน */
+        text-align: center;
+        min-width: 0; /* ป้องกันเนื้อหาดันจนเสียรูป */
+    }
+    .member-label { 
+        font-size: 11px; 
+        font-weight: 400; 
+        color: #222; 
+        margin-bottom: 5px; 
+        border-bottom: 0.5px solid #eee; 
+        display: inline-block; 
+        padding: 0 5px 1px 5px; 
+        white-space: nowrap;
+    }
+    .item-text-centered { 
+        font-size: 10px; 
+        color: #999; 
+        line-height: 1.4; 
+        overflow-wrap: break-word; /* ตัดคำถ้าชื่อรายการยาวเกินไป */
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -71,7 +98,6 @@ with tab1:
             settled = st.checkbox("Settled (Pre-paid)")
             if st.form_submit_button("SAVE"):
                 if item and amount is not None:
-                    # บันทึก วัน/เดือน/ปี และ เวลา ลง Sheet (GMT+7)
                     now_full = (datetime.utcnow() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M")
                     new_row = pd.DataFrame([{"Timestamp": now_full, "Item": item, "Amount_HKD": float(amount), "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Note": note, "Is_Settled": settled}])
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
@@ -101,17 +127,13 @@ with tab1:
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx_to_del).reset_index(drop=True))
                 st.rerun()
 
-        # แสดงตาราง (ตัดเหลือแค่วันที่แสดงผลในแอป)
         st.write("")
         display_df = df.copy()
-        # แยกช่อง Timestamp เอาเฉพาะส่วนแรก (วันที่) มาแสดง
         display_df['Date'] = display_df['Timestamp'].str.split().str[0]
-        
-        # จัดเรียงคอลัมน์ใหม่ให้ Date อยู่หน้าสุด
         final_df = display_df.sort_index(ascending=False)[['Date', 'Item', 'Amount_HKD', 'Payer', 'Category', 'Note']]
         st.dataframe(final_df, use_container_width=True, hide_index=True)
 
-# --- TAB 2 & 3 (เหมือนเดิม) ---
+# --- TAB 2: PLAN ---
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
@@ -121,6 +143,7 @@ with tab2:
                 st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{r['Time']} — {r['Location']}</p>", unsafe_allow_html=True)
     except: st.info("Check Sheets.")
 
+# --- TAB 3: SUMMARY ---
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
@@ -165,11 +188,22 @@ with tab3:
             usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
             st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
             
-            st.write("")
-            col_left, col_right = st.columns(2)
-            with col_left:
-                st.markdown(f"""<div class="centered-item-box"><div class="member-label">KK's Items</div><div class="item-text-centered">{' • ' + ' <br> • '.join(user_items["KK"]) if user_items["KK"] else 'No items'}</div></div>""", unsafe_allow_html=True)
-            with col_right:
-                st.markdown(f"""<div class="centered-item-box"><div class="member-label">Charlie's Items</div><div class="item-text-centered">{' • ' + ' <br> • '.join(user_items["Charlie"]) if user_items["Charlie"] else 'No items'}</div></div>""", unsafe_allow_html=True)
+            # 🚀 FIXED: Mobile-Friendly Item Lists (Using Custom HTML/Flexbox)
+            kk_items = ' • ' + ' <br> • '.join(user_items["KK"]) if user_items["KK"] else 'No items'
+            charlie_items = ' • ' + ' <br> • '.join(user_items["Charlie"]) if user_items["Charlie"] else 'No items'
+
+            st.markdown(f"""
+                <div class="mobile-flex-container">
+                    <div class="flex-item-box">
+                        <div class="member-label">KK's Items</div>
+                        <div class="item-text-centered">{kk_items}</div>
+                    </div>
+                    <div class="flex-item-box">
+                        <div class="member-label">Charlie's Items</div>
+                        <div class="item-text-centered">{charlie_items}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            
     else:
         st.info("No data.")
