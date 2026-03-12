@@ -54,7 +54,7 @@ try:
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled"])
 
-# --- TAB 1: EXPENSE ---
+# --- TAB 1 & 2: (เหมือนเดิม) ---
 with tab1:
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
@@ -70,7 +70,6 @@ with tab1:
                     new_row = pd.DataFrame([{"Timestamp": datetime.now().strftime("%y-%m-%d %H:%M"), "Item": item, "Amount_HKD": float(amount), "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Is_Settled": settled}])
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
                     st.rerun()
-
     if not df.empty:
         with st.expander("EDIT"):
             list_edit = [f"{i}: {row['Item']}" for i, row in df.iterrows()]
@@ -85,18 +84,14 @@ with tab1:
                     if st.form_submit_button("UPDATE"):
                         df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'], df.at[idx, 'Category'] = e_item, e_amount, e_cat
                         conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df); st.rerun()
-
-    if not df.empty:
         with st.expander("DELETE"):
             sel_del = st.selectbox("Choose item to remove", ["-- Select --"] + [f"{i}: {r['Item']}" for i, r in df.iterrows()])
             if sel_del != "-- Select --" and st.button("CONFIRM DELETE", use_container_width=True):
                 idx_to_del = int(sel_del.split(":")[0])
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df.drop(idx_to_del).reset_index(drop=True))
                 st.rerun()
-
     st.dataframe(df.sort_index(ascending=False)[['Item', 'Amount_HKD', 'Payer', 'Category']], use_container_width=True, hide_index=True)
 
-# --- TAB 2: PLAN ---
 with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
@@ -106,7 +101,7 @@ with tab2:
                 st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{r['Time']} — {r['Location']}</p>", unsafe_allow_html=True)
     except: st.info("Check Sheets.")
 
-# --- TAB 3: SUMMARY ---
+# --- TAB 3: SUMMARY (แบบอัปเดตใหม่) ---
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
         # 1. Graph (Donut Chart)
@@ -119,16 +114,14 @@ with tab3:
             st.plotly_chart(fig, use_container_width=True)
             
             st.markdown("<p style='font-weight:300;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
-            
-            # 2. Category Table (แสดงค่า HKD ก่อน)
             st.table(cat_sum.style.format({'Amount_HKD': '{:,.0f}'}))
             
             st.divider()
 
-            # 3. Rate & Settlement Section (ส่วนสรุปเงินไว้ล่างสุด)
+            # 2. Rate & Settlement Section (ส่วนคำนวณเงิน)
             rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
             
-            # คำนวณยอดโอน
+            # คำนวณยอดโอน (เฉพาะที่ยังไม่ Settled)
             df['Is_Settled'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
             bal = {m: 0.0 for m in members}
             for _, r in df[df['Is_Settled'] == False].iterrows():
@@ -138,13 +131,25 @@ with tab3:
                     if p in bal: bal[p] -= (float(r['Amount_HKD']) / len(p_list))
 
             diff = bal["KK"]
-            
             c1, c2 = st.columns(2)
             c1.metric("TRANSFER (HKD)", f"{abs(diff):,.2f}")
             c2.metric("TRANSFER (THB)", f"{abs(diff)*rate:,.0f}")
             
             if diff > 0.01: st.info("Charlie → KK")
             elif diff < -0.01: st.info("KK → Charlie")
+
+            st.write("")
+            
+            # 3. กลับมาแล้ว! สรุปยอดจ่ายจริงรายคน (รวม Settled และ Unsettled)
+            st.markdown("<p style='font-weight:300; text-align:center;'>NET SPEND PER PERSON</p>", unsafe_allow_html=True)
+            usage = {m: 0.0 for m in members}
+            for _, r in df.iterrows():
+                p_list = str(r['Participants']).split(", ")
+                for p in p_list: 
+                    if p in usage: usage[p] += (float(r['Amount_HKD']) / len(p_list))
+            
+            usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
+            st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
             
     else:
         st.info("No data.")
