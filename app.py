@@ -152,7 +152,7 @@ with tab3:
             fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
             fig.update_layout(showlegend=True, margin=dict(t=20, b=20, l=10, r=10), font=dict(family="Anuphan", size=14))
             st.plotly_chart(fig, use_container_width=True)
-            st.markdown("<p style='font-weight:300;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-weight:300;'>CATEGORY</p>", unsafe_allow_html=True)
             st.table(cat_sum.style.format({'Amount_HKD': '{:,.0f}'}))
             st.divider()
 
