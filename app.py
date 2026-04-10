@@ -41,26 +41,25 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
-# --- Data Loading ---
+# --- Data Loading & Type Casting ---
 try:
-    # อ่านข้อมูลและลบแถวที่ว่างเปล่าออกทั้งหมด
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     
-    # ตรวจสอบและสร้างคอลัมน์ที่จำเป็นหากหายไป (ป้องกัน Error)
-    required_cols = ["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled", "Note"]
-    for col in required_cols:
-        if col not in df.columns:
-            df[col] = None
-
+    # บังคับ Type ทันทีที่โหลดเสร็จ เพื่อป้องกัน TypeError ตอนอัปเดต
     if not df.empty:
-        # ทำความสะอาดข้อมูล
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
-        # แปลง Is_Settled ให้เป็น Boolean ที่ถูกต้อง
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: True if str(x).upper() == 'TRUE' else False)
-        df['Payer'] = df['Payer'].fillna(members[0])
-        df['Participants'] = df['Participants'].fillna(", ".join(members))
+        
+        # บังคับคอลัมน์ที่เป็นข้อความให้เป็น String ทั้งหมด
+        text_cols = ['Item', 'Payer', 'Participants', 'Category', 'Note', 'Timestamp']
+        for col in text_cols:
+            if col in df.columns:
+                df[col] = df[col].astype(str).replace(['nan', 'None', 'None'], '')
+            else:
+                df[col] = ""
+    else:
+        df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled", "Note"])
 except Exception as e:
-    st.error(f"Connection Error: {e}")
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled", "Note"])
 
 # --- TAB 1: EXPENSE ---
@@ -76,16 +75,15 @@ with tab1:
             note = st.text_input("Note")
             settled = st.checkbox("Settled (Pre-paid)")
             if st.form_submit_button("SAVE"):
-                if item and amount > 0:
+                if item and amount >= 0:
                     now = (datetime.utcnow() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M")
-                    new_data = pd.DataFrame([{"Timestamp": now, "Item": item, "Amount_HKD": amount, "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Is_Settled": settled, "Note": note}])
+                    new_data = pd.DataFrame([{"Timestamp": now, "Item": str(item), "Amount_HKD": float(amount), "Payer": str(payer), "Participants": ", ".join(parts), "Category": str(cat), "Is_Settled": bool(settled), "Note": str(note)}])
                     df = pd.concat([df, new_data], ignore_index=True)
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                     st.rerun()
 
     if not df.empty:
         with st.expander("✏️ EDIT / 🗑️ DELETE"):
-            # สร้างตัวเลือก Index + Item Name
             options = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
             selected = st.selectbox("Select entry:", options)
             idx = int(selected.split(":")[0])
@@ -106,25 +104,25 @@ with tab1:
                     u_amt = st.number_input("Price", value=float(row['Amount_HKD']))
                     u_payer = st.selectbox("Payer", members, index=members.index(row['Payer']) if row['Payer'] in members else 0)
                     u_cat = st.selectbox("Category", categories, index=categories.index(row['Category']) if row['Category'] in categories else 0)
-                    # Participants handling
                     p_current = [p.strip() for p in str(row['Participants']).split(",") if p.strip() in members]
                     u_parts = st.multiselect("Split with", members, default=p_current)
-                    u_note = st.text_input("Note", value=str(row['Note']) if pd.notna(row['Note']) else "")
+                    u_note = st.text_input("Note", value=str(row['Note']))
                     u_settled = st.checkbox("Settled", value=bool(row['Is_Settled']))
 
                     if st.form_submit_button("UPDATE"):
-                        df.at[idx, 'Item'] = u_item
-                        df.at[idx, 'Amount_HKD'] = u_amt
-                        df.at[idx, 'Payer'] = u_payer
-                        df.at[idx, 'Category'] = u_cat
+                        # ใช้ .astype(object) เพื่อให้ Pandas ยอมรับการแก้ไขค่าที่ต่าง Type กันในบางกรณี
+                        df = df.astype(object) 
+                        df.at[idx, 'Item'] = str(u_item)
+                        df.at[idx, 'Amount_HKD'] = float(u_amt)
+                        df.at[idx, 'Payer'] = str(u_payer)
+                        df.at[idx, 'Category'] = str(u_cat)
                         df.at[idx, 'Participants'] = ", ".join(u_parts)
-                        df.at[idx, 'Note'] = u_note
-                        df.at[idx, 'Is_Settled'] = u_settled
+                        df.at[idx, 'Note'] = str(u_note)
+                        df.at[idx, 'Is_Settled'] = bool(u_settled)
                         conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                         st.rerun()
 
         st.divider()
-        # แสดงผลตาราง (สลับเอาล่าสุดขึ้นบน)
         view_df = df.copy()
         view_df['Date'] = view_df['Timestamp'].astype(str).str.split().str[0]
         st.dataframe(view_df.iloc[::-1][['Date', 'Item', 'Amount_HKD', 'Payer', 'Category']], use_container_width=True, hide_index=True)
@@ -136,27 +134,26 @@ def show_img(url): st.image(url, use_container_width=True)
 with tab2:
     if st.button("VIEW VISUAL DIARY", use_container_width=True):
         show_img("https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png")
-    
     try:
         itinerary = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0).dropna(subset=['Location'])
         for d in sorted(pd.to_numeric(itinerary['Day']).unique()):
             st.markdown(f"<div class='day-header'>DAY {int(d)}</div>", unsafe_allow_html=True)
             for _, r in itinerary[itinerary['Day'] == d].iterrows():
                 st.markdown(f'<div class="plan-card"><div class="time-text">{r["Time"]}</div><div class="location-text">{r["Location"]}</div></div>', unsafe_allow_html=True)
-    except: st.info("Add 'Itinerary' sheet with Day, Time, Location columns to see plan.")
+    except: st.info("Check 'Itinerary' sheet.")
 
 # --- TAB 3: SUMMARY ---
 with tab3:
-    if not df.empty and df['Amount_HKD'].sum() > 0:
-        fig = px.pie(df, values='Amount_HKD', names='Category', hole=0.6, color_discrete_sequence=px.colors.qualitative.Pastel)
+    if not df.empty and pd.to_numeric(df['Amount_HKD']).sum() > 0:
+        sum_df = df.copy()
+        sum_df['Amount_HKD'] = pd.to_numeric(sum_df['Amount_HKD'])
+        fig = px.pie(sum_df, values='Amount_HKD', names='Category', hole=0.6, color_discrete_sequence=px.colors.qualitative.Pastel)
         fig.update_layout(margin=dict(t=20, b=20, l=20, r=20))
         st.plotly_chart(fig, use_container_width=True)
         
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5)
-        
-        # Balance Logic
         balances = {m: 0.0 for m in members}
-        for _, r in df[df['Is_Settled'] == False].iterrows():
+        for _, r in sum_df[sum_df['Is_Settled'] == False].iterrows():
             balances[r['Payer']] += float(r['Amount_HKD'])
             p_list = [p.strip() for p in str(r['Participants']).split(",") if p.strip() in members]
             if p_list:
@@ -169,9 +166,8 @@ with tab3:
         c2.metric("TRANSFER (THB)", f"{abs(kk_bal)*rate:,.0f}")
         st.info("Charlie → KK" if kk_bal > 0 else "KK → Charlie" if kk_bal < 0 else "All Settled")
 
-        # รายการของแต่ละคน
         u_list = {m: [] for m in members}
-        for _, r in df.iterrows():
+        for _, r in sum_df.iterrows():
             p_list = [p.strip() for p in str(r['Participants']).split(",") if p.strip() in members]
             if p_list:
                 share = float(r['Amount_HKD']) / len(p_list)
@@ -183,4 +179,4 @@ with tab3:
                 <div class="flex-item-box"><div class="member-label">Charlie</div><div class="item-text-centered">{'<br>'.join(u_list['Charlie']) if u_list['Charlie'] else '-'}</div></div>
             </div>
         """, unsafe_allow_html=True)
-    else: st.info("No data yet.")
+    else: st.info("No data.")
