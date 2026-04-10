@@ -90,14 +90,15 @@ try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
-    if 'Note' not in df.columns: df['Note'] = ""
-    if 'Is_Settled' not in df.columns: df['Is_Settled'] = False
-except:
+        if 'Note' not in df.columns: df['Note'] = ""
+        if 'Is_Settled' not in df.columns: df['Is_Settled'] = False
+except Exception:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Note", "Is_Settled"])
 
 # --- TAB 1: EXPENSE ---
 with tab1:
-    with st.expander("ADD NEW", expanded=True):
+    # --- ADD NEW FORM ---
+    with st.expander("➕ ADD NEW", expanded=False):
         with st.form("add_form", clear_on_submit=True):
             item = st.text_input("Item")
             c1, c2 = st.columns(2)
@@ -111,29 +112,76 @@ with tab1:
                 if item and amount is not None:
                     now_full = (datetime.utcnow() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M")
                     new_row = pd.DataFrame([{"Timestamp": now_full, "Item": item, "Amount_HKD": float(amount), "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Note": note, "Is_Settled": settled}])
-                    conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
+                    df = pd.concat([df, new_row], ignore_index=True)
+                    conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                     st.rerun()
+
+    # --- EDIT / DELETE SECTION ---
     if not df.empty:
-        st.write("")
+        with st.expander("✏️ EDIT / 🗑️ DELETE"):
+            # สร้างตัวเลือกจากรายการที่มีอยู่
+            df_manage = df.copy()
+            df_manage['Select_Label'] = df_manage.index.astype(str) + ": " + df_manage['Item'] + " (" + df_manage['Amount_HKD'].astype(str) + ")"
+            selected_option = st.selectbox("Select entry to manage:", df_manage['Select_Label'].tolist())
+            selected_index = int(selected_option.split(":")[0])
+            row_to_edit = df.iloc[selected_index]
+
+            col_edit, col_del = st.columns(2)
+            with col_del:
+                if st.button("🗑️ DELETE THIS ENTRY", use_container_width=True):
+                    df = df.drop(selected_index).reset_index(drop=True)
+                    conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
+                    st.toast("Deleted!")
+                    st.rerun()
+            
+            with col_edit:
+                is_editing = st.toggle("EDIT THIS ENTRY")
+
+            if is_editing:
+                with st.form("edit_form"):
+                    e_item = st.text_input("Item", value=row_to_edit['Item'])
+                    ec1, ec2 = st.columns(2)
+                    with ec1: e_amount = st.number_input("Price (HKD)", value=float(row_to_edit['Amount_HKD']))
+                    with ec2: e_payer = st.selectbox("Payer", members, index=members.index(row_to_edit['Payer']))
+                    e_cat = st.selectbox("Category", categories, index=categories.index(row_to_edit['Category']))
+                    
+                    # จัดการ Participants list
+                    current_p = str(row_to_edit['Participants']).split(", ")
+                    e_parts = st.multiselect("Split with", members, default=[p for p in current_p if p in members])
+                    
+                    e_note = st.text_input("Note", value=row_to_edit['Note'])
+                    e_settled = st.checkbox("Settled", value=bool(row_to_edit['Is_Settled']))
+                    
+                    if st.form_submit_button("UPDATE CHANGES"):
+                        df.at[selected_index, 'Item'] = e_item
+                        df.at[selected_index, 'Amount_HKD'] = e_amount
+                        df.at[selected_index, 'Payer'] = e_payer
+                        df.at[selected_index, 'Category'] = e_cat
+                        df.at[selected_index, 'Participants'] = ", ".join(e_parts)
+                        df.at[selected_index, 'Note'] = e_note
+                        df.at[selected_index, 'Is_Settled'] = e_settled
+                        conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
+                        st.toast("Updated!")
+                        st.rerun()
+
+        # --- DISPLAY TABLE ---
+        st.write("---")
         display_df = df.copy()
         display_df['Date'] = display_df['Timestamp'].str.split().str[0]
+        # โชว์รายการล่าสุดขึ้นก่อน
         final_df = display_df.sort_index(ascending=False)[['Date', 'Item', 'Amount_HKD', 'Payer', 'Category', 'Note']]
         st.dataframe(final_df, use_container_width=True, hide_index=True)
 
 # --- TAB 2: PLAN ---
 @st.dialog("VISUAL DIARY", width="large")
 def show_diary_modal(img_url):
-    # แสดงแค่รูปภาพอย่างเดียว ปุ่ม X จะมาเองอัตโนมัติจาก st.dialog
     st.image(img_url, use_container_width=True)
 
 with tab2:
     img_url = "https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png"
-    
-    # ปุ่มเปิด Pop-up
     if st.button("VIEW VISUAL DIARY", use_container_width=True):
         show_diary_modal(img_url)
 
-    # 🗓️ Timeline Plan
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0)
         df_plan = df_plan.dropna(subset=['Day', 'Location'], how='all')
@@ -152,7 +200,7 @@ with tab2:
                         </div>
                     ''', unsafe_allow_html=True)
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error loading plan: {e}")
 
 # --- TAB 3: SUMMARY ---
 with tab3:
@@ -165,6 +213,7 @@ with tab3:
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
         
         bal = {m: 0.0 for m in members}
+        # คำนวณเฉพาะรายการที่ยังไม่ Settled
         for _, r in df[df['Is_Settled'] == False].iterrows():
             bal[r['Payer']] += float(r['Amount_HKD'])
             p_list = str(r['Participants']).split(", ")
@@ -179,6 +228,7 @@ with tab3:
         if diff > 0.01: st.info("Charlie → KK")
         elif diff < -0.01: st.info("KK → Charlie")
         
+        # รายการย่อย
         user_items = {m: [] for m in members}
         for _, r in df.iterrows():
             p_list = str(r['Participants']).split(", ")
@@ -202,4 +252,4 @@ with tab3:
             </div>
         """, unsafe_allow_html=True)
     else:
-        st.info("No data.")
+        st.info("No expense data found.")
