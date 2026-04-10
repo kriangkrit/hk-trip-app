@@ -65,11 +65,10 @@ st.markdown("""
         top: 0; left: 0;
         width: 100%; height: 100%;
         background-color: rgba(0,0,0,0.95);
-        z-index: 999999;
+        z-index: 9999; /* อยู่ใต้ปุ่มปิดเล็กน้อย */
         display: flex;
         justify-content: center;
         align-items: center;
-        flex-direction: column;
     }
     .modal-img {
         max-width: 95%;
@@ -77,6 +76,16 @@ st.markdown("""
         border-radius: 5px;
     }
     
+    /* สไตล์ปุ่มปิดให้ลอยอยู่บนสุด */
+    .close-container {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10000; /* ต้องสูงที่สุดเพื่อให้กดได้ */
+        width: 90%;
+    }
+
     /* Summary Flexbox */
     .mobile-flex-container {
         display: flex;
@@ -104,7 +113,7 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
-# --- Data Loading (Expense) ---
+# --- Data Loading ---
 try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
@@ -141,29 +150,31 @@ with tab1:
 
 # --- TAB 2: PLAN ---
 with tab2:
-    # 🎨 Visual Diary Logic
     img_url = "https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png"
     
     if 'show_visual' not in st.session_state:
         st.session_state.show_visual = False
 
     # ปุ่มเปิด
-    if st.button("🖼️ VIEW VISUAL DIARY", use_container_width=True):
-        st.session_state.show_visual = True
-        st.rerun()
+    if not st.session_state.show_visual:
+        if st.button("🖼️ VIEW VISUAL DIARY", use_container_width=True):
+            st.session_state.show_visual = True
+            st.rerun()
 
     # แสดงผลรูปภาพแบบ Full Screen
     if st.session_state.show_visual:
+        # ปุ่มปิดที่ถูกยกขึ้นมาให้อยู่บนสุด
+        st.markdown('<div class="close-container">', unsafe_allow_html=True)
+        if st.button("❌ CLOSE FULL SCREEN", use_container_width=True):
+            st.session_state.show_visual = False
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
         st.markdown(f"""
             <div class="full-screen-overlay">
                 <img src="{img_url}" class="modal-img">
             </div>
         """, unsafe_allow_html=True)
-        
-        # ปุ่มปิด
-        if st.button("❌ CLOSE FULL SCREEN", use_container_width=True):
-            st.session_state.show_visual = False
-            st.rerun()
 
     # 🗓️ Timeline Plan
     try:
@@ -184,7 +195,7 @@ with tab2:
                         </div>
                     ''', unsafe_allow_html=True)
     except Exception as e:
-        st.error(f"Error loading Plan: {e}")
+        st.error(f"Error: {e}")
 
 # --- TAB 3: SUMMARY ---
 with tab3:
