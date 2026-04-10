@@ -106,8 +106,8 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 
 # --- TAB 1: EXPENSE ---
 with tab1:
-    # --- ADD (Always Visible) ---
-    st.subheader("ADD") # ใช้ subheader เพื่อให้ขนาดเท่ากับ MANAGE
+    # --- ADD ---
+    st.subheader("ADD")
     
     with st.form("add_form", clear_on_submit=True):
         item = st.text_input("What did you buy?", placeholder="e.g. Dim Sum")
@@ -139,10 +139,10 @@ with tab1:
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                 st.rerun()
 
-    # --- MANAGE (EDIT / DELETE - In Expander) ---
+    # --- EDIT / DELETE (In Expander) ---
     if not df.empty:
         st.write("")
-        with st.expander("MANAGE"):
+        with st.expander("Edit / Delete"):
             options = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
             selected = st.selectbox("Select entry to manage:", options)
             idx = int(selected.split(":")[0])
