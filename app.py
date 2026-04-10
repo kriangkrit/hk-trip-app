@@ -130,7 +130,7 @@ with tab2:
     img_url = "https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png"
     
     # ปุ่มเปิด Pop-up
-    if st.button("🖼️ VIEW VISUAL DIARY", use_container_width=True):
+    if st.button("VIEW VISUAL DIARY", use_container_width=True):
         show_diary_modal(img_url)
 
     # 🗓️ Timeline Plan
