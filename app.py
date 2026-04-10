@@ -123,14 +123,13 @@ with tab1:
 # --- TAB 2: PLAN ---
 @st.dialog("VISUAL DIARY", width="large")
 def show_diary_modal(img_url):
+    # แสดงแค่รูปภาพอย่างเดียว ปุ่ม X จะมาเองอัตโนมัติจาก st.dialog
     st.image(img_url, use_container_width=True)
-    if st.button("CLOSE", use_container_width=True):
-        st.rerun()
 
 with tab2:
     img_url = "https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png"
     
-    # ปุ่มเปิด Pop-up (ใช้ฟีเจอร์ Dialog ของ Streamlit)
+    # ปุ่มเปิด Pop-up
     if st.button("🖼️ VIEW VISUAL DIARY", use_container_width=True):
         show_diary_modal(img_url)
 
