@@ -17,21 +17,64 @@ st.markdown("""
         color: #444;
     }
 
+    /* ซ่อน UI ส่วนเกินของ Streamlit */
     summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
     summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
     svg[data-testid="stExpanderIcon"] { display: none !important; }
-
-    h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
-    .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; transition: 0.3s; }
-    button.step-up, button.step-down { display: none !important; }
-    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
-
-    [data-testid="stMetricValue"] { font-weight: 200 !important; font-size: 1.8rem !important; }
     #MainMenu, footer, header { visibility: hidden; }
     .block-container { padding-top: 2rem; padding-left: 1rem; padding-right: 1rem; }
+
+    /* หัวข้อหลัก */
+    h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
     
-    div[data-testid="stExpander"] { border: 1px solid #f9f9f9 !important; border-radius: 12px !important; margin-bottom: 10px; }
+    /* สไตล์ปุ่มและ Input */
+    .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; transition: 0.3s; }
+    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
+    [data-testid="stMetricValue"] { font-weight: 200 !important; font-size: 1.8rem !important; }
     
+    /* --- Styles สำหรับหน้า PLAN (Timeline) --- */
+    .day-header {
+        background-color: #333;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 400;
+        display: inline-block;
+        margin: 25px 0 15px 0;
+        letter-spacing: 1px;
+    }
+    .plan-card {
+        background-color: #ffffff;
+        border-left: 2px solid #eee;
+        padding: 0 0 20px 20px;
+        margin-left: 10px;
+        position: relative;
+    }
+    .plan-card::before {
+        content: '';
+        position: absolute;
+        left: -5px;
+        top: 0;
+        width: 8px;
+        height: 8px;
+        background-color: #333;
+        border-radius: 50%;
+    }
+    .time-text {
+        font-size: 11px;
+        font-weight: 600;
+        color: #999;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+    }
+    .location-text {
+        font-size: 15px;
+        color: #222;
+        line-height: 1.4;
+    }
+
+    /* --- Styles สำหรับหน้า SUMMARY (Mobile Flex) --- */
     .mobile-flex-container {
         display: flex;
         justify-content: space-between;
@@ -75,7 +118,6 @@ categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Oth
 
 # --- Data Loading (Expense) ---
 try:
-    # อ่านจากแผ่นงานแรกสุด (ชีต 1)
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
@@ -133,27 +175,33 @@ with tab1:
         final_df = display_df.sort_index(ascending=False)[['Date', 'Item', 'Amount_HKD', 'Payer', 'Category', 'Note']]
         st.dataframe(final_df, use_container_width=True, hide_index=True)
 
-# --- TAB 2: PLAN ---
+# --- TAB 2: PLAN (New Design: Timeline Cards) ---
 with tab2:
     try:
-        # ดึงข้อมูลโดยใช้ชื่อแผ่นงาน "Itinerary" ตรงๆ (ช่วยลดความสับสนเรื่องลำดับชีต)
+        # ดึงข้อมูลจากแผ่นงาน Itinerary
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0)
-        
-        # กรองข้อมูลเฉพาะแถวที่มีเนื้อหา
         df_plan = df_plan.dropna(subset=['Day', 'Location'], how='all')
         
         if df_plan.empty:
-            st.info("No plan data found in Itinerary sheet.")
+            st.info("No plan data found.")
         else:
             for day in df_plan['Day'].unique():
-                st.markdown(f"**DAY {day}**")
-                # แสดงผล Time — Location
-                for _, r in df_plan[df_plan['Day'] == day].iterrows():
+                # แสดงหัวข้อวันแบบ Badge
+                st.markdown(f"<div class='day-header'>DAY {day}</div>", unsafe_allow_html=True)
+                
+                day_data = df_plan[df_plan['Day'] == day]
+                for _, r in day_data.iterrows():
                     time_val = r['Time'] if pd.notna(r['Time']) else ""
                     loc_val = r['Location'] if pd.notna(r['Location']) else ""
-                    st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{time_val} — {loc_val}</p>", unsafe_allow_html=True)
+                    
+                    # แสดงกิจกรรมแบบ Timeline Card
+                    st.markdown(f"""
+                        <div class="plan-card">
+                            <div class="time-text">{time_val}</div>
+                            <div class="location-text">{loc_val}</div>
+                        </div>
+                    """, unsafe_allow_html=True)
     except Exception as e:
-        # ถ้าพัง จะโชว์บอกเลยว่าพังเพราะอะไร (ช่วยให้แก้ได้ตรงจุด)
         st.error(f"Error loading Itinerary: {e}")
 
 # --- TAB 3: SUMMARY ---
