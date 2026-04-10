@@ -28,6 +28,15 @@ st.markdown("""
     .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
+    /* Custom Small Header Style */
+    .small-header {
+        font-size: 16px;
+        font-weight: 400;
+        color: #666;
+        margin-bottom: 15px;
+        letter-spacing: 1px;
+    }
+
     /* Timeline Styles */
     .day-header {
         font-size: 16px;
@@ -106,8 +115,8 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 
 # --- TAB 1: EXPENSE ---
 with tab1:
-    # --- ADD ---
-    st.subheader("ADD")
+    # --- ADD ITEM (Minimalist Header) ---
+    st.markdown('<div class="small-header">ADD ITEM</div>', unsafe_allow_html=True)
     
     with st.form("add_form", clear_on_submit=True):
         item = st.text_input("What did you buy?", placeholder="e.g. Dim Sum")
@@ -139,7 +148,7 @@ with tab1:
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                 st.rerun()
 
-    # --- EDIT / DELETE (In Expander) ---
+    # --- Edit / Delete (In Expander) ---
     if not df.empty:
         st.write("")
         with st.expander("Edit / Delete"):
