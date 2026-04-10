@@ -17,6 +17,7 @@ st.markdown("""
         color: #444;
     }
 
+    /* ซ่อนส่วนเกินเพื่อให้ดู Minimal */
     summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
     summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
     svg[data-testid="stExpanderIcon"] { display: none !important; }
@@ -148,12 +149,12 @@ with tab1:
             row = df.iloc[idx]
             col_e, col_d = st.columns(2)
             with col_d:
-                if st.button("DELETE", use_container_width=True):
+                if st.button("DELETE", key=f"del_{idx}", use_container_width=True):
                     df = df.drop(idx).reset_index(drop=True)
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                     st.rerun()
             with col_e:
-                edit_mode = st.toggle("EDIT")
+                edit_mode = st.toggle("EDIT", key=f"tog_{idx}")
             if edit_mode:
                 with st.form("edit_form"):
                     u_item = st.text_input("Item", value=str(row['Item']))
@@ -206,6 +207,7 @@ with tab3:
         sum_df = df.copy()
         sum_df['Amount_HKD'] = pd.to_numeric(sum_df['Amount_HKD'])
         fig = px.pie(sum_df, values='Amount_HKD', names='Category', hole=0.6, color_discrete_sequence=px.colors.qualitative.Pastel)
+        fig.update_layout(margin=dict(t=20, b=20, l=20, r=20), showlegend=True)
         st.plotly_chart(fig, use_container_width=True)
         
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5)
@@ -221,7 +223,13 @@ with tab3:
         c1, c2 = st.columns(2)
         c1.metric("TRANSFER (HKD)", f"{abs(kk_bal):,.2f}")
         c2.metric("TRANSFER (THB)", f"{abs(kk_bal)*rate:,.0f}")
-        st.info("Charlie → KK" if kk_bal > 0 else "KK → Charlie" if kk_bal < 0 else "All Settled")
+        
+        if kk_bal > 0.01:
+            st.info("Charlie → KK")
+        elif kk_bal < -0.01:
+            st.info("KK → Charlie")
+        else:
+            st.success("All Settled")
 
         u_list = {m: [] for m in members}
         for _, r in sum_df.iterrows():
@@ -243,19 +251,21 @@ with tab3:
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
     
-    # ลิงก์สำหรับแสดง Google Maps หน้าหลัก (ฮ่องกง)
-    maps_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m12!114.1200!22.2500!114.2200!22.3500!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403e29f3730302b%3A0xe67c062ca1383e58!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1710000000000!5m2!1sen!2sth"
+    # ใช้ Google Maps Embed แบบพิกัดฮ่องกงโดยตรง (แก้ปัญหา Invalid Parameter)
+    maps_embed_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m12!1m3!1d118147.68202061385!2d114.1694!3d22.3193!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f008401340a7%3A0x138768a44280b2a7!2z4Liu4Lit4LiH4LiB4LiH!5e0!3m2!1sth!2sth!4v1710000000000!5m2!1sth!2sth"
 
     st.markdown(f"""
         <iframe 
-            src="{maps_url}" 
+            src="{maps_embed_url}" 
             width="100%" 
-            height="600" 
-            style="border:0; border-radius:15px;" 
+            height="500" 
+            style="border:0; border-radius:15px; background-color: #eee;" 
             allowfullscreen="" 
-            loading="lazy">
+            loading="lazy" 
+            referrerpolicy="no-referrer-when-downgrade">
         </iframe>
     """, unsafe_allow_html=True)
     
     st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/search/Hong+Kong", use_container_width=True)
+    # ปุ่มสำรองเผื่อต้องการเปิดในแอปหลักเพื่อนำทาง
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/search/?api=1&query=Hong+Kong", use_container_width=True)
