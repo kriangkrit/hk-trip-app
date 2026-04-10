@@ -73,6 +73,49 @@ st.markdown("""
         display: inline-block; padding-bottom: 2px; margin-bottom: 5px;
     }
     .item-text-centered { font-size: 10px; color: #999; line-height: 1.4; }
+    
+    /* --- CSS สำหรับ Modal เต็มหน้าจอ (Full Screen Modal) --- */
+    .stPopUp {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.9); /* พื้นหลังดำโปร่งแสง */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 100000; /* อยู่ชั้นบนสุด */
+        visibility: hidden; /* ซ่อนไว้ก่อน */
+        opacity: 0;
+        transition: opacity 0.3s, visibility 0.3s;
+    }
+    
+    .stPopUp.active {
+        visibility: visible;
+        opacity: 1;
+    }
+    
+    .modal-content-wrapper {
+        position: relative;
+        max-width: 90%;
+        max-height: 90%;
+    }
+    
+    .modal-image {
+        max-width: 100%;
+        max-height: 90vh;
+        border-radius: 8px;
+    }
+    
+    .close-modal-btn {
+        position: absolute;
+        top: -40px;
+        right: 0;
+        color: white;
+        background-color: transparent;
+        border: none;
+        font-size: 30px;
+        cursor: pointer;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -95,7 +138,7 @@ try:
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Note", "Is_Settled"])
 
-# --- TAB 1: EXPENSE ---
+# --- TAB 1: EXPENSE --- (โค้ดเดิม)
 with tab1:
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
@@ -122,17 +165,65 @@ with tab1:
 
 # --- TAB 2: PLAN ---
 with tab2:
-    # 🎨 Visual Guide Popover
-    with st.popover("🖼️ VIEW VISUAL DIARY", use_container_width=True):
-        img_url = "https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png"
-        st.image(img_url, use_container_width=True)
+    # --- เริ่มต้นสร้าง Modal ---
+    # ลิงก์รูปภาพจาก GitHub ของคุณ
+    img_url = "https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png"
+    
+    # ตัวแปรสถานะเพื่อเช็คว่าเปิด Modal อยู่หรือไม่
+    if 'modal_active' not in st.session_state:
+        st.session_state.modal_active = False
+
+    # สร้างปุ่มเพื่อเปิด Modal (ใช้ st.button แทน st.popover)
+    if st.button("🖼️ VIEW VISUAL DIARY (FULL SCREEN)", use_container_width=True):
+        st.session_state.modal_active = True
+        st.rerun()
+
+    # สร้าง HTML สำหรับ Modal (เด้งขึ้นมาถ้า modal_active เป็น True)
+    if st.session_state.modal_active:
+        # ปุ่มเพื่อปิด Modal (แบบที่กากบาท)
+        close_btn_id = "close_modal"
+        
+        st.markdown(f"""
+            <div id="visualModal" class="stPopUp active">
+                <div class="modal-content-wrapper">
+                    <button id="{close_btn_id}" class="close-modal-btn">×</button>
+                    <img src="{img_url}" class="modal-image" alt="Visual Guide">
+                </div>
+            </div>
+            
+            <script>
+            var modal = document.getElementById("visualModal");
+            var closeBtn = document.getElementById("{close_btn_id}");
+            
+            // เมื่อคลิกที่กากบาท ให้ปิด modal และบอก Streamlit
+            closeBtn.onclick = function() {
+                modal.classList.remove("active");
+                // เพื่อให้สถานะใน session_state อัปเดต ต้องส่งสัญญาณกลับไปที่ Streamlit
+                // แต่นี่คือ JS ขาเดียว ทางที่ง่ายกว่าคือใช้ st.button ร่วมกับ rerun (ทำด้านล่าง)
+            }
+            
+            // คลิกที่พื้นหลังดำก็ปิด
+            modal.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.classList.remove("active");
+                }
+            }
+            </script>
+        """, unsafe_allow_html=True)
+        
+        # เพิ่มปุ่ม Streamlit เพื่อปิดสถานะ (วางซ่อนไว้เพื่อให้ rerun)
+        if st.button("CLOSE GUIDE", key="close_stream", use_container_width=True):
+            st.session_state.modal_active = False
+            st.rerun()
+
+    st.markdown("<hr style='border: 0.5px solid #eee;'>", unsafe_allow_html=True)
+    # --- จบ Modal ---
 
     # 🗓️ Timeline Plan
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0)
         df_plan = df_plan.dropna(subset=['Day', 'Location'], how='all')
         if not df_plan.empty:
-            # แปลงเลข Day ให้เป็นจำนวนเต็ม (ป้องกัน Day 1.0)
             df_plan['Day'] = pd.to_numeric(df_plan['Day'], errors='coerce').fillna(0).astype(int)
             for day in sorted(df_plan['Day'].unique()):
                 st.markdown(f"<div class='day-header'>DAY {day}</div>", unsafe_allow_html=True)
@@ -144,16 +235,14 @@ with tab2:
     except Exception as e:
         st.error(f"Error loading Plan: {e}")
 
-# --- TAB 3: SUMMARY ---
+# --- TAB 3: SUMMARY --- (โค้ดเดิม)
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
         fig.update_layout(showlegend=True, margin=dict(t=10, b=10, l=10, r=10), font=dict(family="Anuphan", size=12))
         st.plotly_chart(fig, use_container_width=True)
-        
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
-        
         bal = {m: 0.0 for m in members}
         for _, r in df[df['Is_Settled'] == False].iterrows():
             bal[r['Payer']] += float(r['Amount_HKD'])
@@ -161,7 +250,6 @@ with tab3:
             share = float(r['Amount_HKD']) / len(p_list)
             for p in p_list: 
                 if p in bal: bal[p] -= share
-        
         diff = bal["KK"]
         c1, c2 = st.columns(2)
         c1.metric("TRANSFER (HKD)", f"{abs(diff):,.2f}")
