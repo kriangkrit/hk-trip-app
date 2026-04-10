@@ -202,8 +202,8 @@ with tab3:
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
     
-    # วาง URL ส่วน src จาก iframe ของคุณที่นี่
-    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3691.802773295842!2d114.1672918!3d22.285493!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x340400631669463f%3A0x6ec040520623604f!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1712745582345!5m2!1sen!2sth"
+    # ลิงก์ด้านล่างนี้มีการระบุพิกัด !2d114.17!3d22.29 (Hong Kong) ไว้เรียบร้อยแล้ว
+    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m12!1m18!1m12!1m3!1d118147.6820202166!2d114.1032185!3d22.2855225!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f008401e40c5%3A0x7f0322464d3fd321!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1715000000000!5m2!1sen!2sth"
 
     st.markdown(f"""
         <iframe 
@@ -216,6 +216,3 @@ with tab4:
             referrerpolicy="no-referrer-when-downgrade">
         </iframe>
     """, unsafe_allow_html=True)
-    
-    st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/kXvA6WfK3N5mYh9u8", use_container_width=True)
