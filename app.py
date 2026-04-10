@@ -11,114 +11,64 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
-    /* สไตล์พื้นฐาน: พื้นหลังขาวสะอาด */
-    html, body, [class*="css"], .stApp {
+    /* 1. บังคับพื้นหลังของแอปและ Container ทั้งหมดให้เป็นสีขาว */
+    .stApp, .main, .block-container, [data-testid="stHeader"] {
         background-color: #ffffff !important;
-        font-family: 'Anuphan', sans-serif !important;
         color: #333 !important;
     }
 
-    /* ซ่อน Header และ Elements ที่ไม่จำเป็น */
-    #MainMenu, footer, header { visibility: hidden; }
-    .block-container { padding-top: 2rem; }
-    
-    /* หัวข้อใหญ่ */
-    h1 { 
-        font-weight: 200 !important; 
-        letter-spacing: 4px; 
-        text-align: center; 
-        color: #222;
-        margin-bottom: 2rem;
-    }
-
-    /* Tab: ปรับให้ขาวคลีน */
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: #ffffff;
-        border-bottom: 0.5px solid #f0f0f0;
-    }
-    .stTabs [data-baseweb="tab"] {
-        font-weight: 300;
-        color: #999;
-    }
-    .stTabs [aria-selected="true"] {
-        color: #222 !important;
-        border-bottom-color: #222 !important;
-    }
-
-    /* ปุ่มทั้งหมด: ขาวเรียบ มีเงาบางๆ */
-    .stButton>button {
-        border-radius: 10px;
-        border: 1px solid #f2f2f2 !important;
+    /* 2. บังคับ Input ทุกประเภท (Text, Number, Select) ให้พื้นหลังขาว ขอบจาง */
+    div[data-baseweb="input"], 
+    div[data-baseweb="select"] > div, 
+    div[data-baseweb="popover"],
+    .stMultiSelect div[role="listbox"],
+    div[role="combobox"] {
         background-color: #ffffff !important;
-        color: #444 !important;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        color: #333 !important;
+        border: 1px solid #eeeeee !important;
+    }
+
+    /* 3. แก้ไขสีตัวอักษรใน Input และ Placeholder ให้มองเห็นบนพื้นขาว */
+    input, p, span, label, div {
+        color: #333 !important;
+        font-family: 'Anuphan', sans-serif !important;
+    }
+
+    /* 4. ปรับแต่งปุ่ม Multi-select tags (KK, Charlie) ให้ดูคลีน */
+    span[data-baseweb="tag"] {
+        background-color: #f5f5f5 !important;
+        color: #333 !important;
+        border: 0.5px solid #eee !important;
+    }
+    
+    /* 5. ปรับแต่งปุ่ม SAVE ให้เป็นสีขาวขอบเทา */
+    .stButton>button {
+        background-color: #ffffff !important;
+        color: #333 !important;
+        border: 1px solid #eeeeee !important;
+        border-radius: 8px;
+        transition: 0.2s;
     }
     .stButton>button:hover {
-        border-color: #ddd !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        background-color: #f9f9f9 !important;
+        border-color: #ccc !important;
     }
 
-    /* 🎯 ปุ่ม Visual Diary แบบขาวพิเศษ */
-    div.stButton > button[p-id*="view_visual_diary"] {
+    /* 6. ซ่อนขีดแดงใต้ Tab และปรับแต่ง Tab ให้ขาวล้วน */
+    .stTabs [data-baseweb="tab-highlight-view"] { background-color: #333 !important; }
+    .stTabs [data-baseweb="tab"] { background-color: transparent !important; }
+
+    /* 7. ปรับสีพื้นหลังของ Number Input (ปุ่ม + และ -) */
+    div[data-testid="stNumberInputStepDown"], 
+    div[data-testid="stNumberInputStepUp"] {
         background-color: #ffffff !important;
-        border: 1px solid #eee !important;
-        font-weight: 300;
-        letter-spacing: 1px;
+        border-left: 1px solid #eee !important;
     }
 
-    /* Input Fields: ขาวและขอบบาง */
-    div[data-baseweb="input"], div[data-baseweb="select"], .stMultiSelect {
-        background-color: #ffffff !important;
-        border-radius: 8px !important;
-        border: 1px solid #f0f0f0 !important;
-    }
-
-    /* แผนการเดินทาง (Timeline) แบบ All White */
-    .day-header {
-        font-size: 14px;
-        letter-spacing: 2px;
-        color: #222;
-        margin: 40px 0 20px 0;
-        text-align: center;
-        border-bottom: 0.5px solid #f5f5f5;
-    }
-    .plan-card {
-        border-left: 0.5px solid #eee;
-        padding: 0 0 20px 20px;
-        margin-left: 10px;
-    }
-    .plan-card::before {
-        background-color: #ddd; /* จุดวงกลมเล็กๆ */
-    }
-    .time-text { font-size: 10px; color: #bbb; text-transform: uppercase; }
-    .location-text { font-size: 14px; color: #444; font-weight: 300; }
-
-    /* Summary Mobile Styles */
-    .mobile-flex-container {
-        border-top: 0.5px solid #f9f9f9;
-        padding-top: 15px;
-    }
-    .member-label { 
-        font-weight: 400;
-        color: #222;
-        border-bottom: none;
-    }
-    
-    /* ตารางและ Dataframe */
-    .styled-table, [data-testid="stTable"] {
-        border: none !important;
-    }
-    
-    /* Expander ขาวล้วน */
-    .stExpander {
-        border: none !important;
-        background-color: #ffffff !important;
-        border-bottom: 1px solid #f9f9f9 !important;
-    }
+    /* ซ่อน UI ที่ไม่จำเป็น */
+    #MainMenu, footer, header { visibility: hidden; }
     </style>
 """, unsafe_allow_html=True)
-
 # --- Connection ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
