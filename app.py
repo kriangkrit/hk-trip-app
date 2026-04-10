@@ -202,9 +202,8 @@ with tab3:
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
     
-    # ✅ ลิงก์ที่ถูกต้องสำหรับการฝัง (Embed) จะต้องมีคำว่า /maps/embed 
-    # และมีพารามิเตอร์ pb ยาวๆ ที่ Google เจนมาให้
-    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m12!1m3!1d118147.68202022026!2d114.1024312061036!3d22.292534570077753!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f07476209377%3A0x700000000000000!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1712740000000!5m2!1sen!2sth"
+    # วาง URL ส่วน src จาก iframe ของคุณที่นี่
+    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3691.802773295842!2d114.1672918!3d22.285493!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x340400631669463f%3A0x6ec040520623604f!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1712745582345!5m2!1sen!2sth"
 
     st.markdown(f"""
         <iframe 
@@ -219,4 +218,4 @@ with tab4:
     """, unsafe_allow_html=True)
     
     st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/6p5qE8SjHqXmS6v67", use_container_width=True)
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/kXvA6WfK3N5mYh9u8", use_container_width=True)
