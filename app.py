@@ -11,64 +11,90 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
-    /* 1. บังคับพื้นหลังของแอปและ Container ทั้งหมดให้เป็นสีขาว */
-    .stApp, .main, .block-container, [data-testid="stHeader"] {
-        background-color: #ffffff !important;
-        color: #333 !important;
+    html, body, [class*="css"], .stMarkdown { 
+        font-family: 'Anuphan', 'Montserrat', sans-serif !important; 
+        font-weight: 300 !important;
+        color: #444;
     }
 
-    /* 2. บังคับ Input ทุกประเภท (Text, Number, Select) ให้พื้นหลังขาว ขอบจาง */
-    div[data-baseweb="input"], 
-    div[data-baseweb="select"] > div, 
-    div[data-baseweb="popover"],
-    .stMultiSelect div[role="listbox"],
-    div[role="combobox"] {
-        background-color: #ffffff !important;
-        color: #333 !important;
-        border: 1px solid #eeeeee !important;
-    }
-
-    /* 3. แก้ไขสีตัวอักษรใน Input และ Placeholder ให้มองเห็นบนพื้นขาว */
-    input, p, span, label, div {
-        color: #333 !important;
-        font-family: 'Anuphan', sans-serif !important;
-    }
-
-    /* 4. ปรับแต่งปุ่ม Multi-select tags (KK, Charlie) ให้ดูคลีน */
-    span[data-baseweb="tag"] {
-        background-color: #f5f5f5 !important;
-        color: #333 !important;
-        border: 0.5px solid #eee !important;
-    }
-    
-    /* 5. ปรับแต่งปุ่ม SAVE ให้เป็นสีขาวขอบเทา */
-    .stButton>button {
-        background-color: #ffffff !important;
-        color: #333 !important;
-        border: 1px solid #eeeeee !important;
-        border-radius: 8px;
-        transition: 0.2s;
-    }
-    .stButton>button:hover {
-        background-color: #f9f9f9 !important;
-        border-color: #ccc !important;
-    }
-
-    /* 6. ซ่อนขีดแดงใต้ Tab และปรับแต่ง Tab ให้ขาวล้วน */
-    .stTabs [data-baseweb="tab-highlight-view"] { background-color: #333 !important; }
-    .stTabs [data-baseweb="tab"] { background-color: transparent !important; }
-
-    /* 7. ปรับสีพื้นหลังของ Number Input (ปุ่ม + และ -) */
-    div[data-testid="stNumberInputStepDown"], 
-    div[data-testid="stNumberInputStepUp"] {
-        background-color: #ffffff !important;
-        border-left: 1px solid #eee !important;
-    }
-
-    /* ซ่อน UI ที่ไม่จำเป็น */
+    summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
+    summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
+    svg[data-testid="stExpanderIcon"] { display: none !important; }
     #MainMenu, footer, header { visibility: hidden; }
+    .block-container { padding-top: 2rem; padding-left: 1rem; padding-right: 1rem; }
+
+    h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
+    
+    /* สไตล์ปุ่มทั่วไป */
+    .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; color: #444; }
+    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
+
+    /* 🎯🎯🎯 ส่วนที่เพิ่มใหม่: เปลี่ยนสีปุ่ม VIEW VISUAL DIARY เป็นสีเทา 🎯🎯🎯 */
+    div.stButton > button[p-id*="view_visual_diary"] {
+        background-color: #f0f0f0 !important; /* สีพื้นหลังเทาอ่อน */
+        color: #666 !important; /* สีตัวอักษรเทาเข้ม */
+        border: 1px solid #ddd !important; /* เส้นขอบเทา */
+    }
+    /* เอฟเฟกต์เมื่อเอาเมาส์ไปวาง (Hover) */
+    div.stButton > button[p-id*="view_visual_diary"]:hover {
+        background-color: #e0e0e0 !important; /* เทาเข้มขึ้นเล็กน้อย */
+        color: #333 !important;
+    }
+    /* 🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯 */
+
+    .small-header {
+        font-size: 16px;
+        font-weight: 400;
+        color: #444; 
+        margin-bottom: 15px;
+        letter-spacing: 1px;
+    }
+
+    /* Timeline Styles */
+    .day-header {
+        font-size: 16px;
+        font-weight: 400;
+        color: #222;
+        margin: 30px 0 15px 0;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+    }
+    .plan-card {
+        border-left: 1px solid #ddd;
+        padding: 0 0 25px 20px;
+        margin-left: 5px;
+        position: relative;
+    }
+    .plan-card::before {
+        content: '';
+        position: absolute;
+        left: -4px;
+        top: 4px;
+        width: 7px;
+        height: 7px;
+        background-color: #bbb;
+        border-radius: 50%;
+    }
+    .time-text { font-size: 11px; color: #aaa; }
+    .location-text { font-size: 14px; color: #444; }
+
+    /* Summary Mobile Styles */
+    .mobile-flex-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
+        margin-top: 15px;
+    }
+    .flex-item-box { flex: 1; text-align: center; }
+    .member-label { 
+        font-size: 11px; color: #222; border-bottom: 0.5px solid #eee; 
+        display: inline-block; padding-bottom: 2px; margin-bottom: 5px;
+    }
+    .item-text-centered { font-size: 10px; color: #999; line-height: 1.4; }
     </style>
 """, unsafe_allow_html=True)
+
 # --- Connection ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
