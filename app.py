@@ -7,16 +7,37 @@ import plotly.express as px
 # --- Config ---
 st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered")
 
-# --- Minimal Theme Toggle (แทนที่ segmented_control) ---
+# --- Initialize Theme State ---
+if 'theme_mode' not in st.session_state:
+    st.session_state.theme_mode = "Light"
+
+# --- Top Bar with Title & Emoji Toggle ---
 col1, col2 = st.columns([3, 1])
 with col1:
-    st.markdown("<h3 style='text-align: left; margin-top: 5px;'>HK TRIP 2026</h3>", unsafe_allow_html=True)
+    # ขยายขนาดชื่อทริปให้ใหญ่ขึ้น (ใช้ h2 แทน h3 และปรับ font-weight)
+    st.markdown("<h2 style='text-align: left; margin-top: 0px; font-weight: 400; letter-spacing: 1px;'>HK TRIP 2026</h2>", unsafe_allow_html=True)
 with col2:
-    # ใช้ Toggle อันเล็กๆ แทน ดูมินิมอลและไม่เกะกะ
-    is_dark = st.toggle("Dark Mode", value=False)
-    theme_mode = "Dark" if is_dark else "Light"
+    # สร้างส่วนเลือกธีมแบบ Emoji (มินิมอลสุดๆ)
+    st.write('<div style="margin-top: -5px;"></div>', unsafe_allow_html=True) # ปรับระยะตลัด
+    
+    # เลือก Emoji ที่จะแสดงตามโหมดปัจจุบัน
+    current_emoji = "☀️" if st.session_state.theme_mode == "Light" else "🌙"
+    
+    # ใช้ Popover เพื่อให้เป็นปุ่ม Emoji เล็กๆ มุมขวาบน
+    with st.popover(current_emoji, use_container_width=False):
+        st.markdown("<p style='font-size:12px; text-align:center; margin-bottom:5px;'>Theme</p>", unsafe_allow_html=True)
+        c_l, c_d = st.columns(2)
+        with c_l:
+            if st.button("☀️"):
+                st.session_state.theme_mode = "Light"
+                st.rerun()
+        with c_d:
+            if st.button("🌙"):
+                st.session_state.theme_mode = "Dark"
+                st.rerun()
 
-# กำหนดค่าสีตามโหมดที่เลือก
+# กำหนดค่าสีตามโหมดใน session_state
+theme_mode = st.session_state.theme_mode
 if theme_mode == "Dark":
     bg_color, text_color, header_color = "#0e1117", "#e0e0e0", "#ffffff"
     border_color, timeline_dot, card_border = "#333333", "#555555", "#444444"
@@ -47,6 +68,15 @@ st.markdown(f"""
     .stButton>button {{ 
         border-radius: 12px; border: 0.5px solid {border_color}; 
         background-color: {input_bg}; color: {text_color};
+    }}
+    
+    /* สไตล์ปุ่ม Popover Emoji มุมขวาบน */
+    [data-testid="stPopover"] button {{
+        background-color: transparent !important;
+        border: none !important;
+        font-size: 20px !important;
+        padding: 0px !important;
+        float: right;
     }}
 
     /* Timeline Styles */
