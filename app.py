@@ -11,30 +11,24 @@ st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered"
 if 'theme_mode' not in st.session_state:
     st.session_state.theme_mode = "Light"
 
-# --- Top Bar with Title & Emoji Toggle ---
-col1, col2 = st.columns([3, 1])
+# --- Top Bar with Big Title & Dual Emoji Toggle ---
+col1, col2 = st.columns([2, 1])
 with col1:
-    # ขยายขนาดชื่อทริปให้ใหญ่ขึ้น (ใช้ h2 แทน h3 และปรับ font-weight)
-    st.markdown("<h2 style='text-align: left; margin-top: 0px; font-weight: 400; letter-spacing: 1px;'>HK TRIP 2026</h2>", unsafe_allow_html=True)
+    # ขยายชื่อทริปให้ตัวใหญ่และหนาขึ้น
+    st.markdown("<h1 style='text-align: left; margin-top: 0px; font-weight: 600; font-size: 32px; letter-spacing: 1px;'>HK TRIP 2026</h1>", unsafe_allow_html=True)
+
 with col2:
-    # สร้างส่วนเลือกธีมแบบ Emoji (มินิมอลสุดๆ)
-    st.write('<div style="margin-top: -5px;"></div>', unsafe_allow_html=True) # ปรับระยะตลัด
-    
-    # เลือก Emoji ที่จะแสดงตามโหมดปัจจุบัน
-    current_emoji = "☀️" if st.session_state.theme_mode == "Light" else "🌙"
-    
-    # ใช้ Popover เพื่อให้เป็นปุ่ม Emoji เล็กๆ มุมขวาบน
-    with st.popover(current_emoji, use_container_width=False):
-        st.markdown("<p style='font-size:12px; text-align:center; margin-bottom:5px;'>Theme</p>", unsafe_allow_html=True)
-        c_l, c_d = st.columns(2)
-        with c_l:
-            if st.button("☀️"):
-                st.session_state.theme_mode = "Light"
-                st.rerun()
-        with c_d:
-            if st.button("🌙"):
-                st.session_state.theme_mode = "Dark"
-                st.rerun()
+    # วางปุ่มอิโมจิคู่กัน ☀️ 🌙
+    st.write('<div style="margin-top: 10px;"></div>', unsafe_allow_html=True)
+    c_light, c_dark = st.columns(2)
+    with c_light:
+        if st.button("☀️"):
+            st.session_state.theme_mode = "Light"
+            st.rerun()
+    with c_dark:
+        if st.button("🌙"):
+            st.session_state.theme_mode = "Dark"
+            st.rerun()
 
 # กำหนดค่าสีตามโหมดใน session_state
 theme_mode = st.session_state.theme_mode
@@ -54,7 +48,7 @@ st.markdown(f"""
     
     .stApp {{ background-color: {bg_color}; }}
     
-    html, body, [class*="css"], .stMarkdown, p, div {{ 
+    html, body, [class*="css"], .stMarkdown, p, div, label {{ 
         font-family: 'Anuphan', sans-serif !important; 
         font-weight: 300 !important;
         color: {text_color} !important;
@@ -65,18 +59,19 @@ st.markdown(f"""
     svg[data-testid="stExpanderIcon"] {{ display: none !important; }}
     #MainMenu, footer, header {{ visibility: hidden; }}
     
+    /* สไตล์ปุ่มกดทั่วไป */
     .stButton>button {{ 
         border-radius: 12px; border: 0.5px solid {border_color}; 
         background-color: {input_bg}; color: {text_color};
     }}
-    
-    /* สไตล์ปุ่ม Popover Emoji มุมขวาบน */
-    [data-testid="stPopover"] button {{
-        background-color: transparent !important;
+
+    /* สไตล์เฉพาะปุ่ม Emoji บนหัวกระดาษ (ทำให้ดูเหมือนไอคอน) */
+    div[data-testid="stColumn"]:nth-child(2) [data-testid="stButton"] button {{
         border: none !important;
-        font-size: 20px !important;
+        background-color: transparent !important;
+        font-size: 24px !important;
         padding: 0px !important;
-        float: right;
+        margin-top: -10px !important;
     }}
 
     /* Timeline Styles */
@@ -95,10 +90,6 @@ st.markdown(f"""
     }}
     .time-text {{ font-size: 11px; color: #888; }}
     .location-text {{ font-size: 14px; color: {text_color}; line-height: 1.5; }}
-    
-    /* Summary Flex */
-    .mobile-flex-container {{ display: flex; justify-content: space-between; gap: 8px; margin-top: 15px; }}
-    .member-label {{ font-size: 11px; color: {text_color}; border-bottom: 0.5px solid {border_color}; margin-bottom: 5px; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -110,7 +101,7 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
-# --- Data Loading (Expense) ---
+# --- Data Loading ---
 try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
@@ -165,17 +156,14 @@ with tab3:
         fig = px.pie(df, values='Amount_HKD', names='Category', hole=0.7)
         fig.update_layout(showlegend=False, paper_bgcolor='rgba(0,0,0,0)', font=dict(color=text_color))
         st.plotly_chart(fig, use_container_width=True)
-        
         rate = st.number_input("Rate", value=4.5)
-        
-        # คำนวณเงินโอน
+        # คำนวณเงินโอนแบบย่อ
         bal = {m: 0.0 for m in members}
         for _, r in df.iterrows():
             bal[r['Payer']] += float(r['Amount_HKD'])
             p_list = str(r['Participants']).split(", ")
             for p in p_list: 
                 if p in bal: bal[p] -= (float(r['Amount_HKD']) / len(p_list))
-        
         diff = bal["KK"]
         st.metric("KK Transfer", f"{diff*rate:,.0f} THB")
     else:
