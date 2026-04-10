@@ -28,11 +28,11 @@ st.markdown("""
     .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
-    /* Custom Small Header Style */
+    /* Custom Header Style - Set to White */
     .small-header {
         font-size: 16px;
         font-weight: 400;
-        color: #666;
+        color: #FFFFFF; /* เปลี่ยนเป็นสีขาว */
         margin-bottom: 15px;
         letter-spacing: 1px;
     }
@@ -115,7 +115,7 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 
 # --- TAB 1: EXPENSE ---
 with tab1:
-    # --- ADD ITEM (Minimalist Header) ---
+    # --- ADD ITEM (White Header) ---
     st.markdown('<div class="small-header">ADD ITEM</div>', unsafe_allow_html=True)
     
     with st.form("add_form", clear_on_submit=True):
