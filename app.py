@@ -11,26 +11,26 @@ st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered"
 if 'theme_mode' not in st.session_state:
     st.session_state.theme_mode = "Light"
 
-# --- Top Bar: Title & Duo Emoji Toggle ---
-col1, col2 = st.columns([3, 1])
+# --- Top Bar with Big Title & Dual Emoji Toggle ---
+col1, col2 = st.columns([2, 1])
 with col1:
-    # ชื่อทริปตัวใหญ่และหนา
+    # ขยายชื่อทริปให้ตัวใหญ่และหนาขึ้น
     st.markdown("<h1 style='text-align: left; margin-top: 0px; font-weight: 600; font-size: 32px; letter-spacing: 1px;'>HK TRIP 2026</h1>", unsafe_allow_html=True)
 
 with col2:
-    # วางปุ่มให้อยู่ในแถวเดียวกันและติดกัน
+    # วางปุ่มอิโมจิคู่กัน ☀️ 🌙
     st.write('<div style="margin-top: 10px;"></div>', unsafe_allow_html=True)
-    inner_c1, inner_c2 = st.columns([1, 1])
-    with inner_c1:
-        if st.button("☀️", key="btn_light"):
+    c_light, c_dark = st.columns(2)
+    with c_light:
+        if st.button("☀️"):
             st.session_state.theme_mode = "Light"
             st.rerun()
-    with inner_c2:
-        if st.button("🌙", key="btn_dark"):
+    with c_dark:
+        if st.button("🌙"):
             st.session_state.theme_mode = "Dark"
             st.rerun()
 
-# กำหนดค่าสีตามโหมด
+# กำหนดค่าสีตามโหมดใน session_state
 theme_mode = st.session_state.theme_mode
 if theme_mode == "Dark":
     bg_color, text_color, header_color = "#0e1117", "#e0e0e0", "#ffffff"
@@ -59,13 +59,18 @@ st.markdown(f"""
     svg[data-testid="stExpanderIcon"] {{ display: none !important; }}
     #MainMenu, footer, header {{ visibility: hidden; }}
     
-    /* สไตล์ปุ่ม Emoji มุมขวาบนให้ชิดกัน */
+    /* สไตล์ปุ่มกดทั่วไป */
+    .stButton>button {{ 
+        border-radius: 12px; border: 0.5px solid {border_color}; 
+        background-color: {input_bg}; color: {text_color};
+    }}
+
+    /* สไตล์เฉพาะปุ่ม Emoji บนหัวกระดาษ (ทำให้ดูเหมือนไอคอน) */
     div[data-testid="stColumn"]:nth-child(2) [data-testid="stButton"] button {{
         border: none !important;
         background-color: transparent !important;
-        font-size: 22px !important;
+        font-size: 24px !important;
         padding: 0px !important;
-        width: auto !important;
         margin-top: -10px !important;
     }}
 
@@ -88,7 +93,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# --- ส่วนอื่นๆ เหมือนเดิม ---
+# --- Connection ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -96,6 +101,7 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
+# --- Data Loading ---
 try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
@@ -103,6 +109,7 @@ try:
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Note", "Is_Settled"])
 
+# --- TAB 1: EXPENSE ---
 with tab1:
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
@@ -121,6 +128,7 @@ with tab1:
     if not df.empty:
         st.dataframe(df.sort_index(ascending=False), use_container_width=True, hide_index=True)
 
+# --- TAB 2: PLAN ---
 @st.dialog("VISUAL DIARY", width="large")
 def show_diary_modal(img_url):
     st.image(img_url, use_container_width=True)
@@ -142,12 +150,14 @@ with tab2:
     except Exception as e:
         st.error(f"Error: {e}")
 
+# --- TAB 3: SUMMARY ---
 with tab3:
     if not df.empty:
         fig = px.pie(df, values='Amount_HKD', names='Category', hole=0.7)
         fig.update_layout(showlegend=False, paper_bgcolor='rgba(0,0,0,0)', font=dict(color=text_color))
         st.plotly_chart(fig, use_container_width=True)
         rate = st.number_input("Rate", value=4.5)
+        # คำนวณเงินโอนแบบย่อ
         bal = {m: 0.0 for m in members}
         for _, r in df.iterrows():
             bal[r['Payer']] += float(r['Amount_HKD'])
