@@ -28,11 +28,11 @@ st.markdown("""
     .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
-    /* Custom Header Style - White & Small */
+    /* ปรับสี ADD ITEM ให้เท่ากับ Edit / Delete (สีเทาเข้ม #444) */
     .small-header {
         font-size: 16px;
         font-weight: 400;
-        color: #FFFFFF; 
+        color: #444; 
         margin-bottom: 15px;
         letter-spacing: 1px;
     }
@@ -95,7 +95,6 @@ try:
     if not df.empty:
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: True if str(x).upper() == 'TRUE' else False)
-        # Force string types for text columns
         for col in ['Item', 'Payer', 'Participants', 'Category', 'Note', 'Timestamp']:
             if col in df.columns:
                 df[col] = df[col].astype(str).replace(['nan', 'None'], '')
@@ -203,9 +202,8 @@ with tab3:
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
     
-    # *** ใช้ URL เฉพาะส่วน src จาก iframe ของคุณ ***
-    # หาก URL ใน iframe ของคุณคือ https://www.google.com/maps9... ให้เอามาใส่ที่นี่
-    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118147.68202022137!2d114.07328965935035!3d22.29255855079815!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f07478df3241%3A0xfa64079059951077!2z4Liu4Lit4LiH4LiB4LiH!5e0!3m2!1sth!2sth!4v1715615615615!5m2!1sth!2sth"
+    # วาง URL ส่วน src จาก iframe ของคุณที่นี่
+    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3691.802773295842!2d114.1672918!3d22.285493!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x340400631669463f%3A0x6ec040520623604f!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1712745582345!5m2!1sen!2sth"
 
     st.markdown(f"""
         <iframe 
@@ -220,4 +218,4 @@ with tab4:
     """, unsafe_allow_html=True)
     
     st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/Yp9H1Z2xNPr7XqZ88", use_container_width=True)
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/kXvA6WfK3N5mYh9u8", use_container_width=True)
