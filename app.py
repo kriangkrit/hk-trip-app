@@ -12,104 +12,51 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
-    /* 1. บังคับสีพื้นหลังขาวและตัวอักษรเทาเข้ม (Force Light Mode) */
+    /* 1. บังคับสีพื้นหลังหน้าจอและตัวหนังสือหลัก */
     .stApp {
         background-color: #ffffff !important;
         color: #444444 !important;
     }
 
-    html, body, [class*="css"], .stMarkdown, p, span { 
-        font-family: 'Anuphan', 'Montserrat', sans-serif !important; 
-        font-weight: 300 !important;
+    /* 2. บังคับสี Input Boxes, Selectboxes, Multiselect ให้เป็นสีขาว/เทาอ่อนเสมอ */
+    div[data-baseweb="input"], div[data-baseweb="select"], .stMultiSelect {
+        background-color: #ffffff !important;
+        border-radius: 8px !important;
+    }
+    
+    /* แก้สีตัวหนังสือในช่อง Input */
+    input {
+        color: #444444 !important;
+        -webkit-text-fill-color: #444444 !important;
+    }
+
+    /* แก้สีปุ่ม Save ให้เห็นชัดขึ้น (ถ้าสีมันกลืน) */
+    .stButton>button { 
+        border-radius: 12px; 
+        border: 0.5px solid #ddd !important; 
+        background-color: #ffffff !important; 
+        color: #444 !important;
+    }
+
+    /* แก้สีตัวหนังสือใน Labels ต่างๆ */
+    label, p, span, div { 
+        font-family: 'Anuphan', sans-serif !important;
         color: #444444 !important;
     }
 
-    /* ปรับแต่ง Expander */
-    summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
-    summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
-    svg[data-testid="stExpanderIcon"] { display: none !important; }
-    
-    /* ซ่อน Header/Footer ของ Streamlit */
-    #MainMenu, footer, header { visibility: hidden; }
-    .block-container { padding-top: 2rem; padding-left: 1rem; padding-right: 1rem; }
-
-    h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; color: #222; }
-    
-    /* สไตล์ปุ่มทั่วไป */
-    .stButton>button { 
-        border-radius: 12px; 
-        border: 0.5px solid #eee; 
-        background-color: #ffffff; 
-        width: 100%; 
-        color: #444; 
-    }
-    
-    /* 🎯 เปลี่ยนสีปุ่ม VIEW VISUAL DIARY เป็นสีเทา */
+    /* 3. ปุ่มพิเศษ VIEW VISUAL DIARY */
     div.stButton > button[p-id*="view_visual_diary"] {
         background-color: #f0f0f0 !important;
         color: #666 !important;
         border: 1px solid #ddd !important;
     }
-    div.stButton > button[p-id*="view_visual_diary"]:hover {
-        background-color: #e0e0e0 !important;
-        color: #333 !important;
-    }
 
-    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
-
-    .small-header {
-        font-size: 16px;
-        font-weight: 400;
-        color: #444; 
-        margin-bottom: 15px;
-        letter-spacing: 1px;
-    }
-
-    /* Timeline Styles */
-    .day-header {
-        font-size: 16px;
-        font-weight: 400;
-        color: #222;
-        margin: 30px 0 15px 0;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 5px;
-    }
-    .plan-card {
-        border-left: 1px solid #ddd;
-        padding: 0 0 25px 20px;
-        margin-left: 5px;
-        position: relative;
-    }
-    .plan-card::before {
-        content: '';
-        position: absolute;
-        left: -4px;
-        top: 4px;
-        width: 7px;
-        height: 7px;
-        background-color: #bbb;
-        border-radius: 50%;
-    }
-    .time-text { font-size: 11px; color: #aaa; }
-    .location-text { font-size: 14px; color: #444; }
-
-    /* Summary Mobile Styles */
-    .mobile-flex-container {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        width: 100%;
-        margin-top: 15px;
-    }
-    .flex-item-box { flex: 1; text-align: center; }
-    .member-label { 
-        font-size: 11px; color: #222; border-bottom: 0.5px solid #eee; 
-        display: inline-block; padding-bottom: 2px; margin-bottom: 5px;
-    }
-    .item-text-centered { font-size: 10px; color: #999; line-height: 1.4; }
+    /* ซ่อน UI ที่ไม่จำเป็น */
+    #MainMenu, footer, header { visibility: hidden; }
+    svg[data-testid="stExpanderIcon"] { display: none !important; }
     
-    /* ปรับแต่งตารางและกราฟให้เข้ากับ Light Mode */
-    .stTable { background-color: white !important; }
+    summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
+    summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; }
     </style>
 """, unsafe_allow_html=True)
 
