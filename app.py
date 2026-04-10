@@ -11,24 +11,23 @@ st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered"
 if 'theme_mode' not in st.session_state:
     st.session_state.theme_mode = "Light"
 
-# --- Top Bar with Big Title & Dual Emoji Toggle ---
-col1, col2 = st.columns([2, 1])
+# --- Top Bar Section ---
+# ใช้ columns แบบสัดส่วน [5, 1, 1] เพื่อให้ปุ่มอยู่ชิดขวาและติดกัน
+st.markdown('<div style="margin-top: -50px;"></div>', unsafe_allow_html=True) # ดึงทุกอย่างขึ้นไปข้างบนสุด
+col1, col2, col3 = st.columns([5, 0.5, 0.5])
+
 with col1:
-    # ขยายชื่อทริปให้ตัวใหญ่และหนาขึ้น
-    st.markdown("<h1 style='text-align: left; margin-top: 0px; font-weight: 600; font-size: 32px; letter-spacing: 1px;'>HK TRIP 2026</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: left; margin-top: 0px; font-weight: 600; font-size: 28px; letter-spacing: 0.5px;'>HK TRIP 2026</h1>", unsafe_allow_html=True)
 
 with col2:
-    # วางปุ่มอิโมจิคู่กัน ☀️ 🌙
-    st.write('<div style="margin-top: 10px;"></div>', unsafe_allow_html=True)
-    c_light, c_dark = st.columns(2)
-    with c_light:
-        if st.button("☀️"):
-            st.session_state.theme_mode = "Light"
-            st.rerun()
-    with c_dark:
-        if st.button("🌙"):
-            st.session_state.theme_mode = "Dark"
-            st.rerun()
+    if st.button("☀️"):
+        st.session_state.theme_mode = "Light"
+        st.rerun()
+
+with col3:
+    if st.button("🌙"):
+        st.session_state.theme_mode = "Dark"
+        st.rerun()
 
 # กำหนดค่าสีตามโหมดใน session_state
 theme_mode = st.session_state.theme_mode
@@ -46,6 +45,9 @@ st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
+    /* ดึงช่องว่างด้านบนออกให้หมด */
+    .block-container {{ padding-top: 1.5rem !important; padding-bottom: 0rem !important; }}
+    
     .stApp {{ background-color: {bg_color}; }}
     
     html, body, [class*="css"], .stMarkdown, p, div, label {{ 
@@ -59,25 +61,30 @@ st.markdown(f"""
     svg[data-testid="stExpanderIcon"] {{ display: none !important; }}
     #MainMenu, footer, header {{ visibility: hidden; }}
     
-    /* สไตล์ปุ่มกดทั่วไป */
+    /* สไตล์ปุ่มทั่วไป */
     .stButton>button {{ 
         border-radius: 12px; border: 0.5px solid {border_color}; 
         background-color: {input_bg}; color: {text_color};
     }}
 
-    /* สไตล์เฉพาะปุ่ม Emoji บนหัวกระดาษ (ทำให้ดูเหมือนไอคอน) */
-    div[data-testid="stColumn"]:nth-child(2) [data-testid="stButton"] button {{
+    /* สไตล์เฉพาะปุ่ม Emoji บนหัวกระดาษ (ทำให้ชิดกันและไม่มีกรอบ) */
+    .stButton button[kind="secondary"] {{
         border: none !important;
         background-color: transparent !important;
-        font-size: 24px !important;
+        font-size: 22px !important;
         padding: 0px !important;
-        margin-top: -10px !important;
+        margin-top: 5px !important;
+        width: 30px !important;
     }}
+    
+    /* จัดระยะขอบ Columns */
+    [data-testid="column"] {{ width: fit-content !important; flex: unset !important; min-width: unset !important; }}
+    [data-testid="column"]:nth-child(1) {{ flex: 1 1 0% !important; }}
 
     /* Timeline Styles */
     .day-header {{
         font-size: 16px; font-weight: 400; color: {header_color};
-        margin: 30px 0 15px 0; border-bottom: 1px solid {border_color};
+        margin: 25px 0 15px 0; border-bottom: 1px solid {border_color};
         padding-bottom: 5px; letter-spacing: 1px;
     }}
     .plan-card {{
@@ -157,7 +164,6 @@ with tab3:
         fig.update_layout(showlegend=False, paper_bgcolor='rgba(0,0,0,0)', font=dict(color=text_color))
         st.plotly_chart(fig, use_container_width=True)
         rate = st.number_input("Rate", value=4.5)
-        # คำนวณเงินโอนแบบย่อ
         bal = {m: 0.0 for m in members}
         for _, r in df.iterrows():
             bal[r['Payer']] += float(r['Amount_HKD'])
