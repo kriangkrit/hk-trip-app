@@ -41,16 +41,12 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
-# --- Data Loading & Type Casting ---
+# --- Data Loading ---
 try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
-    
-    # บังคับ Type ทันทีที่โหลดเสร็จ เพื่อป้องกัน TypeError ตอนอัปเดต
     if not df.empty:
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: True if str(x).upper() == 'TRUE' else False)
-        
-        # บังคับคอลัมน์ที่เป็นข้อความให้เป็น String ทั้งหมด
         text_cols = ['Item', 'Payer', 'Participants', 'Category', 'Note', 'Timestamp']
         for col in text_cols:
             if col in df.columns:
@@ -59,31 +55,34 @@ try:
                 df[col] = ""
     else:
         df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled", "Note"])
-except Exception as e:
+except Exception:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled", "Note"])
 
 # --- TAB 1: EXPENSE ---
 with tab1:
-    with st.expander("➕ ADD NEW"):
-        with st.form("add_form", clear_on_submit=True):
-            item = st.text_input("Item")
-            c1, c2 = st.columns(2)
-            with c1: amount = st.number_input("Price (HKD)", min_value=0.0, step=1.0)
-            with c2: payer = st.selectbox("Payer", members)
-            cat = st.selectbox("Category", categories)
-            parts = st.multiselect("Split with", members, default=members)
-            note = st.text_input("Note")
-            settled = st.checkbox("Settled (Pre-paid)")
-            if st.form_submit_button("SAVE"):
-                if item and amount >= 0:
-                    now = (datetime.utcnow() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M")
-                    new_data = pd.DataFrame([{"Timestamp": now, "Item": str(item), "Amount_HKD": float(amount), "Payer": str(payer), "Participants": ", ".join(parts), "Category": str(cat), "Is_Settled": bool(settled), "Note": str(note)}])
-                    df = pd.concat([df, new_data], ignore_index=True)
-                    conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
-                    st.rerun()
+    # --- ADD NEW (Show directly) ---
+    st.subheader("ADD NEW")
+    with st.form("add_form", clear_on_submit=True):
+        item = st.text_input("Item")
+        c1, c2 = st.columns(2)
+        with c1: amount = st.number_input("Price (HKD)", min_value=0.0, step=1.0)
+        with c2: payer = st.selectbox("Payer", members)
+        cat = st.selectbox("Category", categories)
+        parts = st.multiselect("Split with", members, default=members)
+        note = st.text_input("Note")
+        settled = st.checkbox("Settled (Pre-paid)")
+        if st.form_submit_button("SAVE"):
+            if item and amount >= 0:
+                now = (datetime.utcnow() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M")
+                new_data = pd.DataFrame([{"Timestamp": now, "Item": str(item), "Amount_HKD": float(amount), "Payer": str(payer), "Participants": ", ".join(parts), "Category": str(cat), "Is_Settled": bool(settled), "Note": str(note)}])
+                df = pd.concat([df, new_data], ignore_index=True)
+                conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
+                st.rerun()
 
+    # --- EDIT / DELETE (In Expander) ---
     if not df.empty:
-        with st.expander("✏️ EDIT / 🗑️ DELETE"):
+        st.write("")
+        with st.expander("EDIT / DELETE"):
             options = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
             selected = st.selectbox("Select entry:", options)
             idx = int(selected.split(":")[0])
@@ -91,12 +90,12 @@ with tab1:
 
             col_e, col_d = st.columns(2)
             with col_d:
-                if st.button("🗑️ DELETE", use_container_width=True):
+                if st.button("DELETE", use_container_width=True):
                     df = df.drop(idx).reset_index(drop=True)
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                     st.rerun()
             with col_e:
-                edit_mode = st.toggle("✏️ EDIT")
+                edit_mode = st.toggle("EDIT")
 
             if edit_mode:
                 with st.form("edit_form"):
@@ -110,7 +109,6 @@ with tab1:
                     u_settled = st.checkbox("Settled", value=bool(row['Is_Settled']))
 
                     if st.form_submit_button("UPDATE"):
-                        # ใช้ .astype(object) เพื่อให้ Pandas ยอมรับการแก้ไขค่าที่ต่าง Type กันในบางกรณี
                         df = df.astype(object) 
                         df.at[idx, 'Item'] = str(u_item)
                         df.at[idx, 'Amount_HKD'] = float(u_amt)
