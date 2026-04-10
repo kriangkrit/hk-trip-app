@@ -32,19 +32,18 @@ st.markdown("""
     
     div[data-testid="stExpander"] { border: 1px solid #f9f9f9 !important; border-radius: 12px !important; margin-bottom: 10px; }
     
-    /* 📱 Mobile Flexbox: บังคับให้ Items อยู่คู่กันไม่ตกบรรทัด */
     .mobile-flex-container {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        gap: 8px; /* ระยะห่างระหว่าง 2 ฝั่ง */
+        gap: 8px;
         width: 100%;
         margin-top: 15px;
     }
     .flex-item-box {
-        flex: 1; /* แบ่งครึ่งหน้าจอเท่ากัน */
+        flex: 1;
         text-align: center;
-        min-width: 0; /* ป้องกันเนื้อหาดันจนเสียรูป */
+        min-width: 0;
     }
     .member-label { 
         font-size: 11px; 
@@ -60,7 +59,7 @@ st.markdown("""
         font-size: 10px; 
         color: #999; 
         line-height: 1.4; 
-        overflow-wrap: break-word; /* ตัดคำถ้าชื่อรายการยาวเกินไป */
+        overflow-wrap: break-word;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -74,8 +73,9 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
-# --- Data Loading ---
+# --- Data Loading (Expense) ---
 try:
+    # อ่านจากแผ่นงานแรกสุด (ชีต 1)
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
@@ -136,12 +136,25 @@ with tab1:
 # --- TAB 2: PLAN ---
 with tab2:
     try:
-        df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1", ttl=0).dropna(subset=['Day', 'Location'], how='all')
-        for day in df_plan['Day'].unique():
-            st.markdown(f"**DAY {day}**")
-            for _, r in df_plan[df_plan['Day'] == day].iterrows():
-                st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{r['Time']} — {r['Location']}</p>", unsafe_allow_html=True)
-    except: st.info("Check Sheets.")
+        # ดึงข้อมูลโดยใช้ชื่อแผ่นงาน "Itinerary" ตรงๆ (ช่วยลดความสับสนเรื่องลำดับชีต)
+        df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0)
+        
+        # กรองข้อมูลเฉพาะแถวที่มีเนื้อหา
+        df_plan = df_plan.dropna(subset=['Day', 'Location'], how='all')
+        
+        if df_plan.empty:
+            st.info("No plan data found in Itinerary sheet.")
+        else:
+            for day in df_plan['Day'].unique():
+                st.markdown(f"**DAY {day}**")
+                # แสดงผล Time — Location
+                for _, r in df_plan[df_plan['Day'] == day].iterrows():
+                    time_val = r['Time'] if pd.notna(r['Time']) else ""
+                    loc_val = r['Location'] if pd.notna(r['Location']) else ""
+                    st.markdown(f"<p style='font-size:14px; color:#888; margin-bottom:2px;'>{time_val} — {loc_val}</p>", unsafe_allow_html=True)
+    except Exception as e:
+        # ถ้าพัง จะโชว์บอกเลยว่าพังเพราะอะไร (ช่วยให้แก้ได้ตรงจุด)
+        st.error(f"Error loading Itinerary: {e}")
 
 # --- TAB 3: SUMMARY ---
 with tab3:
@@ -188,7 +201,6 @@ with tab3:
             usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
             st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
             
-            # 🚀 FIXED: Mobile-Friendly Item Lists (Using Custom HTML/Flexbox)
             kk_items = ' • ' + ' <br> • '.join(user_items["KK"]) if user_items["KK"] else 'No items'
             charlie_items = ' • ' + ' <br> • '.join(user_items["Charlie"]) if user_items["Charlie"] else 'No items'
 
