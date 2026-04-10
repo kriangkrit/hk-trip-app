@@ -7,7 +7,6 @@ import plotly.express as px
 # --- Config & Minimalism Style ---
 st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered")
 
-# --- CSS Styles ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
@@ -58,33 +57,6 @@ st.markdown("""
     }
     .time-text { font-size: 11px; color: #aaa; margin-bottom: 2px; }
     .location-text { font-size: 14px; color: #444; line-height: 1.5; }
-
-    /* Full Screen Modal Overlay */
-    .full-screen-overlay {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background-color: rgba(0,0,0,0.95);
-        z-index: 9999; /* อยู่ใต้ปุ่มปิดเล็กน้อย */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-    .modal-img {
-        max-width: 95%;
-        max-height: 85vh;
-        border-radius: 5px;
-    }
-    
-    /* สไตล์ปุ่มปิดให้ลอยอยู่บนสุด */
-    .close-container {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 10000; /* ต้องสูงที่สุดเพื่อให้กดได้ */
-        width: 90%;
-    }
 
     /* Summary Flexbox */
     .mobile-flex-container {
@@ -149,32 +121,18 @@ with tab1:
         st.dataframe(final_df, use_container_width=True, hide_index=True)
 
 # --- TAB 2: PLAN ---
+@st.dialog("VISUAL DIARY", width="large")
+def show_diary_modal(img_url):
+    st.image(img_url, use_container_width=True)
+    if st.button("CLOSE", use_container_width=True):
+        st.rerun()
+
 with tab2:
     img_url = "https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png"
     
-    if 'show_visual' not in st.session_state:
-        st.session_state.show_visual = False
-
-    # ปุ่มเปิด
-    if not st.session_state.show_visual:
-        if st.button("🖼️ VIEW VISUAL DIARY", use_container_width=True):
-            st.session_state.show_visual = True
-            st.rerun()
-
-    # แสดงผลรูปภาพแบบ Full Screen
-    if st.session_state.show_visual:
-        # ปุ่มปิดที่ถูกยกขึ้นมาให้อยู่บนสุด
-        st.markdown('<div class="close-container">', unsafe_allow_html=True)
-        if st.button("❌ CLOSE FULL SCREEN", use_container_width=True):
-            st.session_state.show_visual = False
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        st.markdown(f"""
-            <div class="full-screen-overlay">
-                <img src="{img_url}" class="modal-img">
-            </div>
-        """, unsafe_allow_html=True)
+    # ปุ่มเปิด Pop-up (ใช้ฟีเจอร์ Dialog ของ Streamlit)
+    if st.button("🖼️ VIEW VISUAL DIARY", use_container_width=True):
+        show_diary_modal(img_url)
 
     # 🗓️ Timeline Plan
     try:
