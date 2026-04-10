@@ -17,7 +17,7 @@ st.markdown("""
         color: #444;
     }
 
-    /* Hide Streamlit UI */
+    /* ซ่อน UI ส่วนเกิน */
     summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
     summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
     svg[data-testid="stExpanderIcon"] { display: none !important; }
@@ -40,8 +40,8 @@ st.markdown("""
         letter-spacing: 1px;
     }
     .plan-card {
-        background-color: transparent;
-        border-left: 1px solid #ddd;
+        background-color: transparent; /* เอาพื้นหลังขาวออก */
+        border-left: 1px solid #ddd;   /* เส้น Timeline บางลง */
         padding: 0 0 25px 20px;
         margin-left: 5px;
         position: relative;
@@ -53,7 +53,7 @@ st.markdown("""
         top: 4px;
         width: 7px;
         height: 7px;
-        background-color: #bbb;
+        background-color: #bbb; /* จุดสีเทาอ่อนดูละมุนกว่า */
         border-radius: 50%;
     }
     .time-text {
@@ -90,15 +90,6 @@ st.markdown("""
         margin-bottom: 5px;
     }
     .item-text-centered { font-size: 10px; color: #999; line-height: 1.4; }
-    
-    /* Weather Widget Box */
-    .weather-box {
-        background-color: #fcfcfc;
-        border: 1px solid #f0f0f0;
-        border-radius: 15px;
-        padding: 10px;
-        margin-bottom: 20px;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -111,7 +102,7 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
-# --- Data Loading (Expense) ---
+# --- Data Loading ---
 try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
@@ -147,18 +138,8 @@ with tab1:
         final_df = display_df.sort_index(ascending=False)[['Date', 'Item', 'Amount_HKD', 'Payer', 'Category', 'Note']]
         st.dataframe(final_df, use_container_width=True, hide_index=True)
 
-# --- TAB 2: PLAN (Ultra Minimal + Weather) ---
+# --- TAB 2: PLAN (Ultra Minimal Design) ---
 with tab2:
-    # 🌦️ Weather Widget Section
-    st.markdown("""
-        <div class="weather-box">
-            <a class="weatherwidget-io" href="https://forecast7.com/en/22d32114d17/hong-kong/" data-label_1="HONG KONG" data-label_2="WEATHER" data-font="Anuphan" data-icons="Climacons Animated" data-mode="Current" data-theme="pure" >HONG KONG WEATHER</a>
-            <script>
-            !function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='https://weatherwidget.io/js/widget.min.js';fjs.parentNode.insertBefore(js,fjs);}}(document,'script','weatherwidget-io-js');
-            </script>
-        </div>
-    """, unsafe_allow_html=True)
-
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0)
         df_plan = df_plan.dropna(subset=['Day', 'Location'], how='all')
@@ -166,7 +147,7 @@ with tab2:
         if df_plan.empty:
             st.info("No plan data found.")
         else:
-            # แปลงเลข Day ให้เป็นจำนวนเต็ม (ป้องกัน 1.0)
+            # แปลงเลข Day ให้เป็นจำนวนเต็ม (ป้องกันการเกิด 1.0)
             df_plan['Day'] = pd.to_numeric(df_plan['Day'], errors='coerce').fillna(0).astype(int)
             
             for day in sorted(df_plan['Day'].unique()):
@@ -184,7 +165,7 @@ with tab2:
                         </div>
                     """, unsafe_allow_html=True)
     except Exception as e:
-        st.error(f"Error loading Plan: {e}")
+        st.error(f"Error: {e}")
 
 # --- TAB 3: SUMMARY ---
 with tab3:
@@ -196,7 +177,7 @@ with tab3:
         
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
         
-        # Calculate Balance
+        # คำนวณ Net Balance
         bal = {m: 0.0 for m in members}
         for _, r in df[df['Is_Settled'] == False].iterrows():
             bal[r['Payer']] += float(r['Amount_HKD'])
@@ -212,7 +193,7 @@ with tab3:
         if diff > 0.01: st.info("Charlie → KK")
         elif diff < -0.01: st.info("KK → Charlie")
         
-        # Per Person Details
+        # สรุปรายการรายคนแบบ Flexbox
         user_items = {m: [] for m in members}
         for _, r in df.iterrows():
             p_list = str(r['Participants']).split(", ")
