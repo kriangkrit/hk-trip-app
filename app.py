@@ -7,6 +7,7 @@ import plotly.express as px
 # --- Config & Minimalism Style ---
 st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered")
 
+# --- CSS Styles ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
@@ -58,6 +59,24 @@ st.markdown("""
     .time-text { font-size: 11px; color: #aaa; margin-bottom: 2px; }
     .location-text { font-size: 14px; color: #444; line-height: 1.5; }
 
+    /* Full Screen Modal Overlay */
+    .full-screen-overlay {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.95);
+        z-index: 999999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+    .modal-img {
+        max-width: 95%;
+        max-height: 85vh;
+        border-radius: 5px;
+    }
+    
     /* Summary Flexbox */
     .mobile-flex-container {
         display: flex;
@@ -73,49 +92,6 @@ st.markdown("""
         display: inline-block; padding-bottom: 2px; margin-bottom: 5px;
     }
     .item-text-centered { font-size: 10px; color: #999; line-height: 1.4; }
-    
-    /* --- CSS สำหรับ Modal เต็มหน้าจอ (Full Screen Modal) --- */
-    .stPopUp {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background-color: rgba(0,0,0,0.9); /* พื้นหลังดำโปร่งแสง */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 100000; /* อยู่ชั้นบนสุด */
-        visibility: hidden; /* ซ่อนไว้ก่อน */
-        opacity: 0;
-        transition: opacity 0.3s, visibility 0.3s;
-    }
-    
-    .stPopUp.active {
-        visibility: visible;
-        opacity: 1;
-    }
-    
-    .modal-content-wrapper {
-        position: relative;
-        max-width: 90%;
-        max-height: 90%;
-    }
-    
-    .modal-image {
-        max-width: 100%;
-        max-height: 90vh;
-        border-radius: 8px;
-    }
-    
-    .close-modal-btn {
-        position: absolute;
-        top: -40px;
-        right: 0;
-        color: white;
-        background-color: transparent;
-        border: none;
-        font-size: 30px;
-        cursor: pointer;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -138,7 +114,7 @@ try:
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Note", "Is_Settled"])
 
-# --- TAB 1: EXPENSE --- (โค้ดเดิม)
+# --- TAB 1: EXPENSE ---
 with tab1:
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
@@ -165,59 +141,29 @@ with tab1:
 
 # --- TAB 2: PLAN ---
 with tab2:
-    # --- เริ่มต้นสร้าง Modal ---
-    # ลิงก์รูปภาพจาก GitHub ของคุณ
+    # 🎨 Visual Diary Logic
     img_url = "https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png"
     
-    # ตัวแปรสถานะเพื่อเช็คว่าเปิด Modal อยู่หรือไม่
-    if 'modal_active' not in st.session_state:
-        st.session_state.modal_active = False
+    if 'show_visual' not in st.session_state:
+        st.session_state.show_visual = False
 
-    # สร้างปุ่มเพื่อเปิด Modal (ใช้ st.button แทน st.popover)
-    if st.button("🖼️ VIEW VISUAL DIARY (FULL SCREEN)", use_container_width=True):
-        st.session_state.modal_active = True
+    # ปุ่มเปิด
+    if st.button("🖼️ VIEW VISUAL DIARY", use_container_width=True):
+        st.session_state.show_visual = True
         st.rerun()
 
-    # สร้าง HTML สำหรับ Modal (เด้งขึ้นมาถ้า modal_active เป็น True)
-    if st.session_state.modal_active:
-        # ปุ่มเพื่อปิด Modal (แบบที่กากบาท)
-        close_btn_id = "close_modal"
-        
+    # แสดงผลรูปภาพแบบ Full Screen
+    if st.session_state.show_visual:
         st.markdown(f"""
-            <div id="visualModal" class="stPopUp active">
-                <div class="modal-content-wrapper">
-                    <button id="{close_btn_id}" class="close-modal-btn">×</button>
-                    <img src="{img_url}" class="modal-image" alt="Visual Guide">
-                </div>
+            <div class="full-screen-overlay">
+                <img src="{img_url}" class="modal-img">
             </div>
-            
-            <script>
-            var modal = document.getElementById("visualModal");
-            var closeBtn = document.getElementById("{close_btn_id}");
-            
-            // เมื่อคลิกที่กากบาท ให้ปิด modal และบอก Streamlit
-            closeBtn.onclick = function() {
-                modal.classList.remove("active");
-                // เพื่อให้สถานะใน session_state อัปเดต ต้องส่งสัญญาณกลับไปที่ Streamlit
-                // แต่นี่คือ JS ขาเดียว ทางที่ง่ายกว่าคือใช้ st.button ร่วมกับ rerun (ทำด้านล่าง)
-            }
-            
-            // คลิกที่พื้นหลังดำก็ปิด
-            modal.onclick = function(event) {
-                if (event.target == modal) {
-                    modal.classList.remove("active");
-                }
-            }
-            </script>
         """, unsafe_allow_html=True)
         
-        # เพิ่มปุ่ม Streamlit เพื่อปิดสถานะ (วางซ่อนไว้เพื่อให้ rerun)
-        if st.button("CLOSE GUIDE", key="close_stream", use_container_width=True):
-            st.session_state.modal_active = False
+        # ปุ่มปิด
+        if st.button("❌ CLOSE FULL SCREEN", use_container_width=True):
+            st.session_state.show_visual = False
             st.rerun()
-
-    st.markdown("<hr style='border: 0.5px solid #eee;'>", unsafe_allow_html=True)
-    # --- จบ Modal ---
 
     # 🗓️ Timeline Plan
     try:
@@ -231,18 +177,25 @@ with tab2:
                 for _, r in day_data.iterrows():
                     time_val = r['Time'] if pd.notna(r['Time']) else ""
                     loc_val = r['Location'] if pd.notna(r['Location']) else ""
-                    st.markdown(f'<div class="plan-card"><div class="time-text">{time_val}</div><div class="location-text">{loc_val}</div></div>', unsafe_allow_html=True)
+                    st.markdown(f'''
+                        <div class="plan-card">
+                            <div class="time-text">{time_val}</div>
+                            <div class="location-text">{loc_val}</div>
+                        </div>
+                    ''', unsafe_allow_html=True)
     except Exception as e:
         st.error(f"Error loading Plan: {e}")
 
-# --- TAB 3: SUMMARY --- (โค้ดเดิม)
+# --- TAB 3: SUMMARY ---
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
         fig.update_layout(showlegend=True, margin=dict(t=10, b=10, l=10, r=10), font=dict(family="Anuphan", size=12))
         st.plotly_chart(fig, use_container_width=True)
+        
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
+        
         bal = {m: 0.0 for m in members}
         for _, r in df[df['Is_Settled'] == False].iterrows():
             bal[r['Payer']] += float(r['Amount_HKD'])
@@ -250,6 +203,7 @@ with tab3:
             share = float(r['Amount_HKD']) / len(p_list)
             for p in p_list: 
                 if p in bal: bal[p] -= share
+        
         diff = bal["KK"]
         c1, c2 = st.columns(2)
         c1.metric("TRANSFER (HKD)", f"{abs(diff):,.2f}")
