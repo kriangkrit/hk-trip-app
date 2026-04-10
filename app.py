@@ -17,7 +17,6 @@ st.markdown("""
         color: #444;
     }
 
-    /* ซ่อน UI ส่วนเกิน */
     summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
     summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
     svg[data-testid="stExpanderIcon"] { display: none !important; }
@@ -26,10 +25,10 @@ st.markdown("""
 
     h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
     
-    .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; }
+    .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
-    /* --- Styles สำหรับหน้า PLAN (Flat Timeline) --- */
+    /* Timeline Styles */
     .day-header {
         font-size: 16px;
         font-weight: 400;
@@ -40,8 +39,8 @@ st.markdown("""
         letter-spacing: 1px;
     }
     .plan-card {
-        background-color: transparent; /* เอาพื้นหลังขาวออก */
-        border-left: 1px solid #ddd;   /* เส้น Timeline บางลง */
+        background-color: transparent;
+        border-left: 1px solid #ddd;
         padding: 0 0 25px 20px;
         margin-left: 5px;
         position: relative;
@@ -53,22 +52,13 @@ st.markdown("""
         top: 4px;
         width: 7px;
         height: 7px;
-        background-color: #bbb; /* จุดสีเทาอ่อนดูละมุนกว่า */
+        background-color: #bbb;
         border-radius: 50%;
     }
-    .time-text {
-        font-size: 11px;
-        font-weight: 400;
-        color: #aaa;
-        margin-bottom: 2px;
-    }
-    .location-text {
-        font-size: 14px;
-        color: #444;
-        line-height: 1.5;
-    }
+    .time-text { font-size: 11px; color: #aaa; margin-bottom: 2px; }
+    .location-text { font-size: 14px; color: #444; line-height: 1.5; }
 
-    /* --- Styles สำหรับหน้า SUMMARY --- */
+    /* Summary Flexbox */
     .mobile-flex-container {
         display: flex;
         justify-content: space-between;
@@ -77,17 +67,10 @@ st.markdown("""
         width: 100%;
         margin-top: 15px;
     }
-    .flex-item-box {
-        flex: 1;
-        text-align: center;
-    }
+    .flex-item-box { flex: 1; text-align: center; }
     .member-label { 
-        font-size: 11px; 
-        color: #222; 
-        border-bottom: 0.5px solid #eee; 
-        display: inline-block; 
-        padding-bottom: 2px;
-        margin-bottom: 5px;
+        font-size: 11px; color: #222; border-bottom: 0.5px solid #eee; 
+        display: inline-block; padding-bottom: 2px; margin-bottom: 5px;
     }
     .item-text-centered { font-size: 10px; color: #999; line-height: 1.4; }
     </style>
@@ -102,7 +85,7 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
-# --- Data Loading ---
+# --- Data Loading (Expense) ---
 try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
@@ -130,7 +113,6 @@ with tab1:
                     new_row = pd.DataFrame([{"Timestamp": now_full, "Item": item, "Amount_HKD": float(amount), "Payer": payer, "Participants": ", ".join(parts), "Category": cat, "Note": note, "Is_Settled": settled}])
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=pd.concat([df, new_row], ignore_index=True))
                     st.rerun()
-
     if not df.empty:
         st.write("")
         display_df = df.copy()
@@ -138,34 +120,29 @@ with tab1:
         final_df = display_df.sort_index(ascending=False)[['Date', 'Item', 'Amount_HKD', 'Payer', 'Category', 'Note']]
         st.dataframe(final_df, use_container_width=True, hide_index=True)
 
-# --- TAB 2: PLAN (Ultra Minimal Design) ---
+# --- TAB 2: PLAN ---
 with tab2:
+    # 🎨 Visual Guide Popover
+    with st.popover("🖼️ VIEW VISUAL DIARY", use_container_width=True):
+        img_url = "https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png"
+        st.image(img_url, use_container_width=True)
+
+    # 🗓️ Timeline Plan
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0)
         df_plan = df_plan.dropna(subset=['Day', 'Location'], how='all')
-        
-        if df_plan.empty:
-            st.info("No plan data found.")
-        else:
-            # แปลงเลข Day ให้เป็นจำนวนเต็ม (ป้องกันการเกิด 1.0)
+        if not df_plan.empty:
+            # แปลงเลข Day ให้เป็นจำนวนเต็ม (ป้องกัน Day 1.0)
             df_plan['Day'] = pd.to_numeric(df_plan['Day'], errors='coerce').fillna(0).astype(int)
-            
             for day in sorted(df_plan['Day'].unique()):
                 st.markdown(f"<div class='day-header'>DAY {day}</div>", unsafe_allow_html=True)
-                
                 day_data = df_plan[df_plan['Day'] == day]
                 for _, r in day_data.iterrows():
                     time_val = r['Time'] if pd.notna(r['Time']) else ""
                     loc_val = r['Location'] if pd.notna(r['Location']) else ""
-                    
-                    st.markdown(f"""
-                        <div class="plan-card">
-                            <div class="time-text">{time_val}</div>
-                            <div class="location-text">{loc_val}</div>
-                        </div>
-                    """, unsafe_allow_html=True)
+                    st.markdown(f'<div class="plan-card"><div class="time-text">{time_val}</div><div class="location-text">{loc_val}</div></div>', unsafe_allow_html=True)
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error loading Plan: {e}")
 
 # --- TAB 3: SUMMARY ---
 with tab3:
@@ -177,7 +154,6 @@ with tab3:
         
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
         
-        # คำนวณ Net Balance
         bal = {m: 0.0 for m in members}
         for _, r in df[df['Is_Settled'] == False].iterrows():
             bal[r['Payer']] += float(r['Amount_HKD'])
@@ -185,7 +161,7 @@ with tab3:
             share = float(r['Amount_HKD']) / len(p_list)
             for p in p_list: 
                 if p in bal: bal[p] -= share
-
+        
         diff = bal["KK"]
         c1, c2 = st.columns(2)
         c1.metric("TRANSFER (HKD)", f"{abs(diff):,.2f}")
@@ -193,7 +169,6 @@ with tab3:
         if diff > 0.01: st.info("Charlie → KK")
         elif diff < -0.01: st.info("KK → Charlie")
         
-        # สรุปรายการรายคนแบบ Flexbox
         user_items = {m: [] for m in members}
         for _, r in df.iterrows():
             p_list = str(r['Participants']).split(", ")
