@@ -4,43 +4,73 @@ import pandas as pd
 from datetime import datetime, timedelta
 import plotly.express as px
 
-# --- Config & Minimalism Style ---
+# --- Config & Auto Dark/Light Theme ---
 st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
+    /* 1. โหมดสีขาว (Default) */
+    :root {
+        --bg-color: #ffffff;
+        --text-color: #444444;
+        --header-color: #222222;
+        --border-color: #eeeeee;
+        --timeline-dot: #bbbbbb;
+        --card-border: #dddddd;
+    }
+
+    /* 2. โหมดสีดำ (จะเปลี่ยนอัตโนมัติถ้ามือถือ/คอมเปิด Dark Mode) */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --bg-color: #0e1117;
+            --text-color: #e0e0e0;
+            --header-color: #ffffff;
+            --border-color: #333333;
+            --timeline-dot: #555555;
+            --card-border: #444444;
+        }
+    }
+
     html, body, [class*="css"], .stMarkdown { 
         font-family: 'Anuphan', 'Montserrat', sans-serif !important; 
         font-weight: 300 !important;
-        color: #444;
+        color: var(--text-color) !important;
     }
 
+    /* ปรับแต่ง UI พื้นฐาน */
     summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
     summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
     svg[data-testid="stExpanderIcon"] { display: none !important; }
     #MainMenu, footer, header { visibility: hidden; }
     .block-container { padding-top: 2rem; padding-left: 1rem; padding-right: 1rem; }
 
-    h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
+    h1 { font-weight: 300 !important; color: var(--header-color) !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
     
-    .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; }
-    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
+    /* ปุ่มและ Input */
+    .stButton>button { 
+        border-radius: 12px; 
+        border: 0.5px solid var(--border-color); 
+        background-color: transparent; 
+        color: var(--text-color);
+        width: 100%; 
+    }
+    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid var(--border-color); }
 
     /* Timeline Styles */
     .day-header {
         font-size: 16px;
         font-weight: 400;
-        color: #222;
+        color: var(--header-color);
         margin: 30px 0 15px 0;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--border-color);
         padding-bottom: 5px;
         letter-spacing: 1px;
     }
     .plan-card {
         background-color: transparent;
-        border-left: 1px solid #ddd;
+        border-left: 1px solid var(--card-border);
         padding: 0 0 25px 20px;
         margin-left: 5px;
         position: relative;
@@ -52,11 +82,11 @@ st.markdown("""
         top: 4px;
         width: 7px;
         height: 7px;
-        background-color: #bbb;
+        background-color: var(--timeline-dot);
         border-radius: 50%;
     }
-    .time-text { font-size: 11px; color: #aaa; margin-bottom: 2px; }
-    .location-text { font-size: 14px; color: #444; line-height: 1.5; }
+    .time-text { font-size: 11px; color: #888; margin-bottom: 2px; }
+    .location-text { font-size: 14px; color: var(--text-color); line-height: 1.5; }
 
     /* Summary Flexbox */
     .mobile-flex-container {
@@ -69,10 +99,10 @@ st.markdown("""
     }
     .flex-item-box { flex: 1; text-align: center; }
     .member-label { 
-        font-size: 11px; color: #222; border-bottom: 0.5px solid #eee; 
+        font-size: 11px; color: var(--text-color); border-bottom: 0.5px solid var(--border-color); 
         display: inline-block; padding-bottom: 2px; margin-bottom: 5px;
     }
-    .item-text-centered { font-size: 10px; color: #999; line-height: 1.4; }
+    .item-text-centered { font-size: 10px; color: #888; line-height: 1.4; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -85,7 +115,7 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
-# --- Data Loading ---
+# --- Data Loading (Expense) ---
 try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
@@ -123,17 +153,13 @@ with tab1:
 # --- TAB 2: PLAN ---
 @st.dialog("VISUAL DIARY", width="large")
 def show_diary_modal(img_url):
-    # แสดงแค่รูปภาพอย่างเดียว ปุ่ม X จะมาเองอัตโนมัติจาก st.dialog
     st.image(img_url, use_container_width=True)
 
 with tab2:
     img_url = "https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png"
-    
-    # ปุ่มเปิด Pop-up
-    if st.button("VIEW VISUAL DIARY", use_container_width=True):
+    if st.button("🖼️ VIEW VISUAL DIARY", use_container_width=True):
         show_diary_modal(img_url)
 
-    # 🗓️ Timeline Plan
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0)
         df_plan = df_plan.dropna(subset=['Day', 'Location'], how='all')
