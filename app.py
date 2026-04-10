@@ -4,105 +4,114 @@ import pandas as pd
 from datetime import datetime, timedelta
 import plotly.express as px
 
-# --- Config & Auto Dark/Light Theme ---
+# --- Config & Theme Logic ---
 st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered")
 
-st.markdown("""
+# สร้างปุ่มเลือกโหมดที่ Sidebar
+with st.sidebar:
+    st.title("Settings")
+    theme_mode = st.radio("Choose Theme", ["Light", "Dark"], index=0)
+
+# กำหนดสีตามโหมดที่เลือก
+if theme_mode == "Light":
+    bg_color = "#ffffff"
+    text_color = "#444444"
+    header_color = "#222222"
+    border_color = "#eeeeee"
+    timeline_dot = "#bbbbbb"
+    card_border = "#dddddd"
+    input_bg = "#ffffff"
+else:
+    bg_color = "#0e1117"
+    text_color = "#e0e0e0"
+    header_color = "#ffffff"
+    border_color = "#333333"
+    timeline_dot = "#555555"
+    card_border = "#444444"
+    input_bg = "#1e1e1e"
+
+# นำตัวแปรสีมาใส่ใน CSS
+st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
-    /* 1. โหมดสีขาว (Default) */
-    :root {
-        --bg-color: #ffffff;
-        --text-color: #444444;
-        --header-color: #222222;
-        --border-color: #eeeeee;
-        --timeline-dot: #bbbbbb;
-        --card-border: #dddddd;
-    }
+    /* บังคับสีพื้นหลังของแอป */
+    .stApp {{
+        background-color: {bg_color};
+    }}
 
-    /* 2. โหมดสีดำ (จะเปลี่ยนอัตโนมัติถ้ามือถือ/คอมเปิด Dark Mode) */
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --bg-color: #0e1117;
-            --text-color: #e0e0e0;
-            --header-color: #ffffff;
-            --border-color: #333333;
-            --timeline-dot: #555555;
-            --card-border: #444444;
-        }
-    }
-
-    html, body, [class*="css"], .stMarkdown { 
+    html, body, [class*="css"], .stMarkdown, p, div {{ 
         font-family: 'Anuphan', 'Montserrat', sans-serif !important; 
         font-weight: 300 !important;
-        color: var(--text-color) !important;
-    }
+        color: {text_color} !important;
+    }}
 
-    /* ปรับแต่ง UI พื้นฐาน */
-    summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
-    summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
-    svg[data-testid="stExpanderIcon"] { display: none !important; }
-    #MainMenu, footer, header { visibility: hidden; }
-    .block-container { padding-top: 2rem; padding-left: 1rem; padding-right: 1rem; }
+    summary > span > div > div {{ font-size: 0 !important; visibility: hidden !important; }}
+    summary > span > div > div > p {{ font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }}
+    svg[data-testid="stExpanderIcon"] {{ display: none !important; }}
+    #MainMenu, footer, header {{ visibility: hidden; }}
+    .block-container {{ padding-top: 2rem; padding-left: 1rem; padding-right: 1rem; }}
 
-    h1 { font-weight: 300 !important; color: var(--header-color) !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
+    h1, h2, h3 {{ font-weight: 300 !important; color: {header_color} !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }}
     
-    /* ปุ่มและ Input */
-    .stButton>button { 
+    .stButton>button {{ 
         border-radius: 12px; 
-        border: 0.5px solid var(--border-color); 
-        background-color: transparent; 
-        color: var(--text-color);
+        border: 0.5px solid {border_color}; 
+        background-color: {input_bg}; 
+        color: {text_color};
         width: 100%; 
-    }
-    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid var(--border-color); }
+    }}
+    div[data-baseweb="input"], div[data-baseweb="select"] {{ 
+        border-radius: 8px; 
+        border: 0.5px solid {border_color}; 
+        background-color: {input_bg} !important; 
+    }}
 
     /* Timeline Styles */
-    .day-header {
+    .day-header {{
         font-size: 16px;
         font-weight: 400;
-        color: var(--header-color);
+        color: {header_color};
         margin: 30px 0 15px 0;
-        border-bottom: 1px solid var(--border-color);
+        border-bottom: 1px solid {border_color};
         padding-bottom: 5px;
         letter-spacing: 1px;
-    }
-    .plan-card {
+    }}
+    .plan-card {{
         background-color: transparent;
-        border-left: 1px solid var(--card-border);
+        border-left: 1px solid {card_border};
         padding: 0 0 25px 20px;
         margin-left: 5px;
         position: relative;
-    }
-    .plan-card::before {
+    }}
+    .plan-card::before {{
         content: '';
         position: absolute;
         left: -4px;
         top: 4px;
         width: 7px;
         height: 7px;
-        background-color: var(--timeline-dot);
+        background-color: {timeline_dot};
         border-radius: 50%;
-    }
-    .time-text { font-size: 11px; color: #888; margin-bottom: 2px; }
-    .location-text { font-size: 14px; color: var(--text-color); line-height: 1.5; }
+    }}
+    .time-text {{ font-size: 11px; color: #888; margin-bottom: 2px; }}
+    .location-text {{ font-size: 14px; color: {text_color}; line-height: 1.5; }}
 
-    /* Summary Flexbox */
-    .mobile-flex-container {
+    /* Summary Styles */
+    .mobile-flex-container {{
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
         gap: 8px;
         width: 100%;
         margin-top: 15px;
-    }
-    .flex-item-box { flex: 1; text-align: center; }
-    .member-label { 
-        font-size: 11px; color: var(--text-color); border-bottom: 0.5px solid var(--border-color); 
+    }}
+    .flex-item-box {{ flex: 1; text-align: center; }}
+    .member-label {{ 
+        font-size: 11px; color: {text_color}; border-bottom: 0.5px solid {border_color}; 
         display: inline-block; padding-bottom: 2px; margin-bottom: 5px;
-    }
-    .item-text-centered { font-size: 10px; color: #888; line-height: 1.4; }
+    }}
+    .item-text-centered {{ font-size: 10px; color: #888; line-height: 1.4; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -185,7 +194,13 @@ with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig.update_layout(showlegend=True, margin=dict(t=10, b=10, l=10, r=10), font=dict(family="Anuphan", size=12))
+        fig.update_layout(
+            showlegend=True, 
+            margin=dict(t=10, b=10, l=10, r=10), 
+            font=dict(family="Anuphan", size=12, color=text_color),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)'
+        )
         st.plotly_chart(fig, use_container_width=True)
         
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
@@ -202,8 +217,6 @@ with tab3:
         c1, c2 = st.columns(2)
         c1.metric("TRANSFER (HKD)", f"{abs(diff):,.2f}")
         c2.metric("TRANSFER (THB)", f"{abs(diff)*rate:,.0f}")
-        if diff > 0.01: st.info("Charlie → KK")
-        elif diff < -0.01: st.info("KK → Charlie")
         
         user_items = {m: [] for m in members}
         for _, r in df.iterrows():
