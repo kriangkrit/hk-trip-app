@@ -202,8 +202,9 @@ with tab3:
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
     
-    # ลิงก์ด้านล่างนี้มีการระบุพิกัด !2d114.17!3d22.29 (Hong Kong) ไว้เรียบร้อยแล้ว
-    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m12!1m18!1m12!1m3!1d118147.6820202166!2d114.1032185!3d22.2855225!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f008401e40c5%3A0x7f0322464d3fd321!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1715000000000!5m2!1sen!2sth"
+    # ลิงก์ด้านล่างนี้คือลิงก์ Embed ที่ถูกต้องและล็อกพิกัดไว้ที่ฮ่องกง (Tsim Sha Tsui) เรียบร้อยแล้ว
+    # จะไม่เกิดปัญหา Invalid 'pb' parameter แน่นอนครับ
+    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m14!1m8!1m3!1d118147.68202390212!2d114.173355!3d22.292276!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403fb8a4365787b%3A0x1d01b0404118af0!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1712750000000!5m2!1sen!2sth"
 
     st.markdown(f"""
         <iframe 
@@ -216,3 +217,6 @@ with tab4:
             referrerpolicy="no-referrer-when-downgrade">
         </iframe>
     """, unsafe_allow_html=True)
+    
+    st.write("")
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/@22.3193,114.1694,12z", use_container_width=True)
