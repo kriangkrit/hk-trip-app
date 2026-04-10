@@ -17,7 +17,6 @@ st.markdown("""
         color: #444;
     }
 
-    /* ซ่อนส่วนเกินเพื่อให้ดู Minimal */
     summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
     summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
     svg[data-testid="stExpanderIcon"] { display: none !important; }
@@ -29,7 +28,7 @@ st.markdown("""
     .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
-    /* Custom Header Style - White & Small */
+    /* Header Style - White & Small */
     .small-header {
         font-size: 16px;
         font-weight: 400;
@@ -46,7 +45,6 @@ st.markdown("""
         margin: 30px 0 15px 0;
         border-bottom: 1px solid #eee;
         padding-bottom: 5px;
-        letter-spacing: 1px;
     }
     .plan-card {
         border-left: 1px solid #ddd;
@@ -64,14 +62,13 @@ st.markdown("""
         background-color: #bbb;
         border-radius: 50%;
     }
-    .time-text { font-size: 11px; color: #aaa; margin-bottom: 2px; }
-    .location-text { font-size: 14px; color: #444; line-height: 1.5; }
+    .time-text { font-size: 11px; color: #aaa; }
+    .location-text { font-size: 14px; color: #444; }
 
-    /* Summary Flexbox */
+    /* Summary Mobile Styles */
     .mobile-flex-container {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
         gap: 8px;
         width: 100%;
         margin-top: 15px;
@@ -92,13 +89,12 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
-# --- Data Loading & Fix Types ---
+# --- Data Loading ---
 try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: True if str(x).upper() == 'TRUE' else False)
-        
         text_cols = ['Item', 'Payer', 'Participants', 'Category', 'Note', 'Timestamp']
         for col in text_cols:
             if col in df.columns:
@@ -116,7 +112,6 @@ tab1, tab2, tab3, tab4 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY", "
 # --- TAB 1: EXPENSE ---
 with tab1:
     st.markdown('<div class="small-header">ADD ITEM</div>', unsafe_allow_html=True)
-    
     with st.form("add_form", clear_on_submit=True):
         item = st.text_input("What did you buy?", placeholder="e.g. Dim Sum")
         c1, c2 = st.columns(2)
@@ -125,17 +120,12 @@ with tab1:
         c3, c4 = st.columns(2)
         with c3: cat = st.selectbox("Category", categories)
         with c4: parts = st.multiselect("Split", members, default=members)
-        note = st.text_input("Note", placeholder="Optional details...")
+        note = st.text_input("Note", placeholder="Optional...")
         settled = st.checkbox("Pre-paid (Settled)")
-        
         if st.form_submit_button("SAVE"):
             if item and amount >= 0:
                 now = (datetime.utcnow() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M")
-                new_data = pd.DataFrame([{
-                    "Timestamp": now, "Item": str(item), "Amount_HKD": float(amount), 
-                    "Payer": str(payer), "Participants": ", ".join(parts), 
-                    "Category": str(cat), "Is_Settled": bool(settled), "Note": str(note)
-                }])
+                new_data = pd.DataFrame([{"Timestamp": now, "Item": str(item), "Amount_HKD": float(amount), "Payer": str(payer), "Participants": ", ".join(parts), "Category": str(cat), "Is_Settled": bool(settled), "Note": str(note)}])
                 df = pd.concat([df, new_data], ignore_index=True)
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                 st.rerun()
@@ -149,12 +139,11 @@ with tab1:
             row = df.iloc[idx]
             col_e, col_d = st.columns(2)
             with col_d:
-                if st.button("DELETE", key=f"del_{idx}", use_container_width=True):
+                if st.button("DELETE", use_container_width=True):
                     df = df.drop(idx).reset_index(drop=True)
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                     st.rerun()
-            with col_e:
-                edit_mode = st.toggle("EDIT", key=f"tog_{idx}")
+            with col_e: edit_mode = st.toggle("EDIT")
             if edit_mode:
                 with st.form("edit_form"):
                     u_item = st.text_input("Item", value=str(row['Item']))
@@ -176,11 +165,8 @@ with tab1:
                         df.at[idx, 'Is_Settled'] = bool(u_settled)
                         conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                         st.rerun()
-
         st.divider()
-        view_df = df.copy()
-        view_df['Date'] = view_df['Timestamp'].astype(str).str.split().str[0]
-        st.dataframe(view_df.iloc[::-1][['Date', 'Item', 'Amount_HKD', 'Payer']], use_container_width=True, hide_index=True)
+        st.dataframe(df.iloc[::-1][['Timestamp', 'Item', 'Amount_HKD', 'Payer']], use_container_width=True, hide_index=True)
 
 # --- TAB 2: PLAN ---
 @st.dialog("VISUAL DIARY", width="large")
@@ -198,68 +184,40 @@ with tab2:
                 st.markdown(f"<div class='day-header'>DAY {day}</div>", unsafe_allow_html=True)
                 for _, r in df_plan[df_plan['Day'] == day].iterrows():
                     st.markdown(f'<div class="plan-card"><div class="time-text">{r["Time"]}</div><div class="location-text">{r["Location"]}</div></div>', unsafe_allow_html=True)
-    except:
-        st.info("Check 'Itinerary' sheet for plan details.")
+    except: st.info("Check 'Itinerary' sheet.")
 
 # --- TAB 3: SUMMARY ---
 with tab3:
     if not df.empty and pd.to_numeric(df['Amount_HKD']).sum() > 0:
-        sum_df = df.copy()
-        sum_df['Amount_HKD'] = pd.to_numeric(sum_df['Amount_HKD'])
-        fig = px.pie(sum_df, values='Amount_HKD', names='Category', hole=0.6, color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig.update_layout(margin=dict(t=20, b=20, l=20, r=20), showlegend=True)
+        fig = px.pie(df, values='Amount_HKD', names='Category', hole=0.6, color_discrete_sequence=px.colors.qualitative.Pastel)
         st.plotly_chart(fig, use_container_width=True)
-        
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5)
         balances = {m: 0.0 for m in members}
-        for _, r in sum_df[sum_df['Is_Settled'] == False].iterrows():
+        for _, r in df[df['Is_Settled'] == False].iterrows():
             balances[r['Payer']] += float(r['Amount_HKD'])
             p_list = [p.strip() for p in str(r['Participants']).split(",") if p.strip() in members]
             if p_list:
                 share = float(r['Amount_HKD']) / len(p_list)
                 for p in p_list: balances[p] -= share
-        
         kk_bal = balances["KK"]
         c1, c2 = st.columns(2)
         c1.metric("TRANSFER (HKD)", f"{abs(kk_bal):,.2f}")
         c2.metric("TRANSFER (THB)", f"{abs(kk_bal)*rate:,.0f}")
-        
-        if kk_bal > 0.01:
-            st.info("Charlie → KK")
-        elif kk_bal < -0.01:
-            st.info("KK → Charlie")
-        else:
-            st.success("All Settled")
-
-        u_list = {m: [] for m in members}
-        for _, r in sum_df.iterrows():
-            p_list = [p.strip() for p in str(r['Participants']).split(",") if p.strip() in members]
-            if p_list:
-                share = float(r['Amount_HKD']) / len(p_list)
-                for p in p_list: u_list[p].append(f"{r['Item']} ({share:,.0f})")
-
-        st.markdown(f"""
-            <div class="mobile-flex-container">
-                <div class="flex-item-box"><div class="member-label">KK</div><div class="item-text-centered">{'<br>'.join(u_list['KK']) if u_list['KK'] else '-'}</div></div>
-                <div class="flex-item-box"><div class="member-label">Charlie</div><div class="item-text-centered">{'<br>'.join(u_list['Charlie']) if u_list['Charlie'] else '-'}</div></div>
-            </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.info("No expense data found.")
+        st.info("Charlie → KK" if kk_bal > 0 else "KK → Charlie" if kk_bal < 0 else "Balanced")
 
 # --- TAB 4: MAP ---
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
     
-    # ใช้ Google Maps Embed แบบพิกัดฮ่องกงโดยตรง (แก้ปัญหา Invalid Parameter)
-    maps_embed_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m12!1m3!1d118147.68202061385!2d114.1694!3d22.3193!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f008401340a7%3A0x138768a44280b2a7!2z4Liu4Lit4LiH4LiB4LiH!5e0!3m2!1sth!2sth!4v1710000000000!5m2!1sth!2sth"
+    # ลิงก์แบบ Embed ที่ Google ยอมรับ (ฮ่องกง)
+    maps_embed_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m12!1m3!1d118147.68202028636!2d114.16281305!3d22.3093125!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403e2ced33cf99b%3A0x28a78a3fa589c34!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1715000000000!5m2!1sen!2sth"
 
     st.markdown(f"""
         <iframe 
             src="{maps_embed_url}" 
             width="100%" 
             height="500" 
-            style="border:0; border-radius:15px; background-color: #eee;" 
+            style="border:0; border-radius:15px; background-color: #f0f0f0;" 
             allowfullscreen="" 
             loading="lazy" 
             referrerpolicy="no-referrer-when-downgrade">
@@ -267,5 +225,4 @@ with tab4:
     """, unsafe_allow_html=True)
     
     st.write("")
-    # ปุ่มสำรองเผื่อต้องการเปิดในแอปหลักเพื่อนำทาง
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/search/?api=1&query=Hong+Kong", use_container_width=True)
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/HongKong", use_container_width=True)
