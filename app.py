@@ -11,87 +11,111 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
-    html, body, [class*="css"], .stMarkdown { 
-        font-family: 'Anuphan', 'Montserrat', sans-serif !important; 
-        font-weight: 300 !important;
-        color: #444;
-    }
-
-    summary > span > div > div { font-size: 0 !important; visibility: hidden !important; }
-    summary > span > div > div > p { font-size: 16px !important; visibility: visible !important; font-family: 'Anuphan' !important; }
-    svg[data-testid="stExpanderIcon"] { display: none !important; }
-    #MainMenu, footer, header { visibility: hidden; }
-    .block-container { padding-top: 2rem; padding-left: 1rem; padding-right: 1rem; }
-
-    h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
-    
-    /* สไตล์ปุ่มทั่วไป */
-    .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; color: #444; }
-    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
-
-    /* 🎯🎯🎯 ส่วนที่เพิ่มใหม่: เปลี่ยนสีปุ่ม VIEW VISUAL DIARY เป็นสีเทา 🎯🎯🎯 */
-    div.stButton > button[p-id*="view_visual_diary"] {
-        background-color: #f0f0f0 !important; /* สีพื้นหลังเทาอ่อน */
-        color: #666 !important; /* สีตัวอักษรเทาเข้ม */
-        border: 1px solid #ddd !important; /* เส้นขอบเทา */
-    }
-    /* เอฟเฟกต์เมื่อเอาเมาส์ไปวาง (Hover) */
-    div.stButton > button[p-id*="view_visual_diary"]:hover {
-        background-color: #e0e0e0 !important; /* เทาเข้มขึ้นเล็กน้อย */
+    /* สไตล์พื้นฐาน: พื้นหลังขาวสะอาด */
+    html, body, [class*="css"], .stApp {
+        background-color: #ffffff !important;
+        font-family: 'Anuphan', sans-serif !important;
         color: #333 !important;
     }
-    /* 🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯 */
 
-    .small-header {
-        font-size: 16px;
-        font-weight: 400;
-        color: #444; 
-        margin-bottom: 15px;
+    /* ซ่อน Header และ Elements ที่ไม่จำเป็น */
+    #MainMenu, footer, header { visibility: hidden; }
+    .block-container { padding-top: 2rem; }
+    
+    /* หัวข้อใหญ่ */
+    h1 { 
+        font-weight: 200 !important; 
+        letter-spacing: 4px; 
+        text-align: center; 
+        color: #222;
+        margin-bottom: 2rem;
+    }
+
+    /* Tab: ปรับให้ขาวคลีน */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: #ffffff;
+        border-bottom: 0.5px solid #f0f0f0;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-weight: 300;
+        color: #999;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #222 !important;
+        border-bottom-color: #222 !important;
+    }
+
+    /* ปุ่มทั้งหมด: ขาวเรียบ มีเงาบางๆ */
+    .stButton>button {
+        border-radius: 10px;
+        border: 1px solid #f2f2f2 !important;
+        background-color: #ffffff !important;
+        color: #444 !important;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    }
+    .stButton>button:hover {
+        border-color: #ddd !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    /* 🎯 ปุ่ม Visual Diary แบบขาวพิเศษ */
+    div.stButton > button[p-id*="view_visual_diary"] {
+        background-color: #ffffff !important;
+        border: 1px solid #eee !important;
+        font-weight: 300;
         letter-spacing: 1px;
     }
 
-    /* Timeline Styles */
+    /* Input Fields: ขาวและขอบบาง */
+    div[data-baseweb="input"], div[data-baseweb="select"], .stMultiSelect {
+        background-color: #ffffff !important;
+        border-radius: 8px !important;
+        border: 1px solid #f0f0f0 !important;
+    }
+
+    /* แผนการเดินทาง (Timeline) แบบ All White */
     .day-header {
-        font-size: 16px;
-        font-weight: 400;
+        font-size: 14px;
+        letter-spacing: 2px;
         color: #222;
-        margin: 30px 0 15px 0;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 5px;
+        margin: 40px 0 20px 0;
+        text-align: center;
+        border-bottom: 0.5px solid #f5f5f5;
     }
     .plan-card {
-        border-left: 1px solid #ddd;
-        padding: 0 0 25px 20px;
-        margin-left: 5px;
-        position: relative;
+        border-left: 0.5px solid #eee;
+        padding: 0 0 20px 20px;
+        margin-left: 10px;
     }
     .plan-card::before {
-        content: '';
-        position: absolute;
-        left: -4px;
-        top: 4px;
-        width: 7px;
-        height: 7px;
-        background-color: #bbb;
-        border-radius: 50%;
+        background-color: #ddd; /* จุดวงกลมเล็กๆ */
     }
-    .time-text { font-size: 11px; color: #aaa; }
-    .location-text { font-size: 14px; color: #444; }
+    .time-text { font-size: 10px; color: #bbb; text-transform: uppercase; }
+    .location-text { font-size: 14px; color: #444; font-weight: 300; }
 
     /* Summary Mobile Styles */
     .mobile-flex-container {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        width: 100%;
-        margin-top: 15px;
+        border-top: 0.5px solid #f9f9f9;
+        padding-top: 15px;
     }
-    .flex-item-box { flex: 1; text-align: center; }
     .member-label { 
-        font-size: 11px; color: #222; border-bottom: 0.5px solid #eee; 
-        display: inline-block; padding-bottom: 2px; margin-bottom: 5px;
+        font-weight: 400;
+        color: #222;
+        border-bottom: none;
     }
-    .item-text-centered { font-size: 10px; color: #999; line-height: 1.4; }
+    
+    /* ตารางและ Dataframe */
+    .styled-table, [data-testid="stTable"] {
+        border: none !important;
+    }
+    
+    /* Expander ขาวล้วน */
+    .stExpander {
+        border: none !important;
+        background-color: #ffffff !important;
+        border-bottom: 1px solid #f9f9f9 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
