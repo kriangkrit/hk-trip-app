@@ -90,7 +90,6 @@ try:
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: True if str(x).upper() == 'TRUE' else False)
         
-        # บังคับคอลัมน์ข้อความให้เป็น string ทั้งหมดเพื่อป้องกัน TypeError
         text_cols = ['Item', 'Payer', 'Participants', 'Category', 'Note', 'Timestamp']
         for col in text_cols:
             if col in df.columns:
@@ -107,8 +106,8 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 
 # --- TAB 1: EXPENSE ---
 with tab1:
-    # --- ADD NEW (Minimalist & Always Visible) ---
-    st.markdown("<div style='margin-top: 1rem; margin-bottom: 1rem; font-size: 14px; letter-spacing: 1px; color: #888;'>NEW ENTRY</div>", unsafe_allow_html=True)
+    # --- ADD (Always Visible) ---
+    st.subheader("ADD") # ใช้ subheader เพื่อให้ขนาดเท่ากับ MANAGE
     
     with st.form("add_form", clear_on_submit=True):
         item = st.text_input("What did you buy?", placeholder="e.g. Dim Sum")
@@ -170,7 +169,7 @@ with tab1:
                     u_settled = st.checkbox("Settled", value=bool(row['Is_Settled']))
 
                     if st.form_submit_button("UPDATE"):
-                        df = df.astype(object) # ปลดล็อค type เพื่อแก้ไข
+                        df = df.astype(object)
                         df.at[idx, 'Item'] = str(u_item)
                         df.at[idx, 'Amount_HKD'] = float(u_amt)
                         df.at[idx, 'Payer'] = str(u_payer)
