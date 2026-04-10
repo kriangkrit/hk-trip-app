@@ -11,25 +11,26 @@ st.set_page_config(page_title="HK 2026", page_icon="🇭🇰", layout="centered"
 if 'theme_mode' not in st.session_state:
     st.session_state.theme_mode = "Light"
 
-# --- Top Bar Section ---
-# ใช้ columns แบบสัดส่วน [5, 1, 1] เพื่อให้ปุ่มอยู่ชิดขวาและติดกัน
-st.markdown('<div style="margin-top: -50px;"></div>', unsafe_allow_html=True) # ดึงทุกอย่างขึ้นไปข้างบนสุด
-col1, col2, col3 = st.columns([5, 0.5, 0.5])
-
+# --- Top Bar: Title & Duo Emoji Toggle ---
+col1, col2 = st.columns([3, 1])
 with col1:
-    st.markdown("<h1 style='text-align: left; margin-top: 0px; font-weight: 600; font-size: 28px; letter-spacing: 0.5px;'>HK TRIP 2026</h1>", unsafe_allow_html=True)
+    # ชื่อทริปตัวใหญ่และหนา
+    st.markdown("<h1 style='text-align: left; margin-top: 0px; font-weight: 600; font-size: 32px; letter-spacing: 1px;'>HK TRIP 2026</h1>", unsafe_allow_html=True)
 
 with col2:
-    if st.button("☀️"):
-        st.session_state.theme_mode = "Light"
-        st.rerun()
+    # วางปุ่มให้อยู่ในแถวเดียวกันและติดกัน
+    st.write('<div style="margin-top: 10px;"></div>', unsafe_allow_html=True)
+    inner_c1, inner_c2 = st.columns([1, 1])
+    with inner_c1:
+        if st.button("☀️", key="btn_light"):
+            st.session_state.theme_mode = "Light"
+            st.rerun()
+    with inner_c2:
+        if st.button("🌙", key="btn_dark"):
+            st.session_state.theme_mode = "Dark"
+            st.rerun()
 
-with col3:
-    if st.button("🌙"):
-        st.session_state.theme_mode = "Dark"
-        st.rerun()
-
-# กำหนดค่าสีตามโหมดใน session_state
+# กำหนดค่าสีตามโหมด
 theme_mode = st.session_state.theme_mode
 if theme_mode == "Dark":
     bg_color, text_color, header_color = "#0e1117", "#e0e0e0", "#ffffff"
@@ -45,9 +46,6 @@ st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@200;300;400&family=Montserrat:wght@200;300;400&display=swap');
     
-    /* ดึงช่องว่างด้านบนออกให้หมด */
-    .block-container {{ padding-top: 1.5rem !important; padding-bottom: 0rem !important; }}
-    
     .stApp {{ background-color: {bg_color}; }}
     
     html, body, [class*="css"], .stMarkdown, p, div, label {{ 
@@ -61,30 +59,20 @@ st.markdown(f"""
     svg[data-testid="stExpanderIcon"] {{ display: none !important; }}
     #MainMenu, footer, header {{ visibility: hidden; }}
     
-    /* สไตล์ปุ่มทั่วไป */
-    .stButton>button {{ 
-        border-radius: 12px; border: 0.5px solid {border_color}; 
-        background-color: {input_bg}; color: {text_color};
-    }}
-
-    /* สไตล์เฉพาะปุ่ม Emoji บนหัวกระดาษ (ทำให้ชิดกันและไม่มีกรอบ) */
-    .stButton button[kind="secondary"] {{
+    /* สไตล์ปุ่ม Emoji มุมขวาบนให้ชิดกัน */
+    div[data-testid="stColumn"]:nth-child(2) [data-testid="stButton"] button {{
         border: none !important;
         background-color: transparent !important;
         font-size: 22px !important;
         padding: 0px !important;
-        margin-top: 5px !important;
-        width: 30px !important;
+        width: auto !important;
+        margin-top: -10px !important;
     }}
-    
-    /* จัดระยะขอบ Columns */
-    [data-testid="column"] {{ width: fit-content !important; flex: unset !important; min-width: unset !important; }}
-    [data-testid="column"]:nth-child(1) {{ flex: 1 1 0% !important; }}
 
     /* Timeline Styles */
     .day-header {{
         font-size: 16px; font-weight: 400; color: {header_color};
-        margin: 25px 0 15px 0; border-bottom: 1px solid {border_color};
+        margin: 30px 0 15px 0; border-bottom: 1px solid {border_color};
         padding-bottom: 5px; letter-spacing: 1px;
     }}
     .plan-card {{
@@ -100,7 +88,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Connection ---
+# --- ส่วนอื่นๆ เหมือนเดิม ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -108,7 +96,6 @@ tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
-# --- Data Loading ---
 try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
@@ -116,7 +103,6 @@ try:
 except:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Note", "Is_Settled"])
 
-# --- TAB 1: EXPENSE ---
 with tab1:
     with st.expander("ADD NEW", expanded=True):
         with st.form("add_form", clear_on_submit=True):
@@ -135,7 +121,6 @@ with tab1:
     if not df.empty:
         st.dataframe(df.sort_index(ascending=False), use_container_width=True, hide_index=True)
 
-# --- TAB 2: PLAN ---
 @st.dialog("VISUAL DIARY", width="large")
 def show_diary_modal(img_url):
     st.image(img_url, use_container_width=True)
@@ -157,7 +142,6 @@ with tab2:
     except Exception as e:
         st.error(f"Error: {e}")
 
-# --- TAB 3: SUMMARY ---
 with tab3:
     if not df.empty:
         fig = px.pie(df, values='Amount_HKD', names='Category', hole=0.7)
