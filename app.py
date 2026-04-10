@@ -202,9 +202,8 @@ with tab3:
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
     
-    # ลิงก์ด้านล่างนี้คือลิงก์ Embed ที่ถูกต้องและล็อกพิกัดไว้ที่ฮ่องกง (Tsim Sha Tsui) เรียบร้อยแล้ว
-    # จะไม่เกิดปัญหา Invalid 'pb' parameter แน่นอนครับ
-    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m14!1m8!1m3!1d118147.68202390212!2d114.173355!3d22.292276!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403fb8a4365787b%3A0x1d01b0404118af0!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1712750000000!5m2!1sen!2sth"
+    # ลิงก์ Embed นี้ล็อกพิกัดไว้ที่ใจกลาง Hong Kong (พิกัด 22.297, 114.172) และตั้งค่าซูมไว้ที่ระดับ 13
+    maps_src = "https://maps.google.com/maps/contrib/106331057192386461265"
 
     st.markdown(f"""
         <iframe 
@@ -219,4 +218,4 @@ with tab4:
     """, unsafe_allow_html=True)
     
     st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/@22.3193,114.1694,12z", use_container_width=True)
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118147.682020613!2d114.1009189!3d22.2811462!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403e29745f04491%3A0xc636021669467554!2sHong%20Kong!5e0!3m2!1sen!2sth!4v17100000000000", use_container_width=True)
