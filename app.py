@@ -136,7 +136,7 @@ with tab1:
 # --- TAB 2: PLAN ---
 with tab2:
     try:
-        df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1784624804", ttl=0).dropna(subset=['Day', 'Location'], how='all')
+        df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="1", ttl=0).dropna(subset=['Day', 'Location'], how='all')
         for day in df_plan['Day'].unique():
             st.markdown(f"**DAY {day}**")
             for _, r in df_plan[df_plan['Day'] == day].iterrows():
