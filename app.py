@@ -28,7 +28,7 @@ st.markdown("""
     .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
-    /* Custom Small White Header */
+    /* Custom Header Style - White & Small */
     .small-header {
         font-size: 16px;
         font-weight: 400;
@@ -65,7 +65,7 @@ st.markdown("""
     .time-text { font-size: 11px; color: #aaa; }
     .location-text { font-size: 14px; color: #444; }
 
-    /* Summary Styles */
+    /* Summary Mobile Styles */
     .mobile-flex-container {
         display: flex;
         justify-content: space-between;
@@ -95,13 +95,13 @@ try:
     if not df.empty:
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
         df['Is_Settled'] = df['Is_Settled'].apply(lambda x: True if str(x).upper() == 'TRUE' else False)
-        text_cols = ['Item', 'Payer', 'Participants', 'Category', 'Note', 'Timestamp']
-        for col in text_cols:
+        # Force string types for text columns
+        for col in ['Item', 'Payer', 'Participants', 'Category', 'Note', 'Timestamp']:
             if col in df.columns:
                 df[col] = df[col].astype(str).replace(['nan', 'None'], '')
     else:
         df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled", "Note"])
-except:
+except Exception:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled", "Note"])
 
 st.title("HK TRIP 2026")
@@ -137,19 +137,19 @@ with tab1:
             row = df.iloc[idx]
             col_e, col_d = st.columns(2)
             with col_d:
-                if st.button("DELETE", use_container_width=True):
+                if st.button("DELETE", key=f"del_{idx}", use_container_width=True):
                     df = df.drop(idx).reset_index(drop=True)
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                     st.rerun()
-            with col_e: edit_mode = st.toggle("EDIT")
+            with col_e:
+                edit_mode = st.toggle("EDIT", key=f"tog_{idx}")
             if edit_mode:
                 with st.form("edit_form"):
                     u_item = st.text_input("Item", value=str(row['Item']))
                     u_amt = st.number_input("Price", value=float(row['Amount_HKD']))
                     u_payer = st.selectbox("Payer", members, index=members.index(row['Payer']) if row['Payer'] in members else 0)
                     u_cat = st.selectbox("Category", categories, index=categories.index(row['Category']) if row['Category'] in categories else 0)
-                    p_curr = [p.strip() for p in str(row['Participants']).split(",") if p.strip() in members]
-                    u_parts = st.multiselect("Split with", members, default=p_curr)
+                    u_parts = st.multiselect("Split with", members, default=[p.strip() for p in str(row['Participants']).split(",") if p.strip() in members])
                     u_note = st.text_input("Note", value=str(row['Note']))
                     u_settled = st.checkbox("Settled", value=bool(row['Is_Settled']))
                     if st.form_submit_button("UPDATE"):
@@ -203,15 +203,15 @@ with tab3:
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
     
-    # URL รูปแบบ Embed ที่ Google อนุญาตให้แสดงผล (พิกัดฮ่องกง)
-    # สังเกตว่าจะมีคำว่า /maps/embed? เพื่อให้เบราว์เซอร์ไม่บล็อกการเชื่อมต่อ
-    embed_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m12!1m3!1d118147.68202104526!2d114.10091040445558!3d22.292556555434444!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403e2ced3331a7b%3A0xef97b1029c132845!2z4Liu4LmH4Lit4LiH4LiB4LiH!5e0!3m2!1sth!2sth!4v1715850000000!5m2!1sth!2sth"
+    # *** ใช้ URL เฉพาะส่วน src จาก iframe ของคุณ ***
+    # หาก URL ใน iframe ของคุณคือ https://www.google.com/maps9... ให้เอามาใส่ที่นี่
+    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118147.68202022137!2d114.07328965935035!3d22.29255855079815!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f07478df3241%3A0xfa64079059951077!2z4Liu4Lit4LiH4LiB4LiH!5e0!3m2!1sth!2sth!4v1715615615615!5m2!1sth!2sth"
 
     st.markdown(f"""
         <iframe 
-            src="{embed_url}" 
+            src="{maps_src}" 
             width="100%" 
-            height="500" 
+            height="550" 
             style="border:0; border-radius:15px; background-color: #f0f0f0;" 
             allowfullscreen="" 
             loading="lazy" 
@@ -220,4 +220,4 @@ with tab4:
     """, unsafe_allow_html=True)
     
     st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/9Wp6h8Y6X2Y6X2Y6A", use_container_width=True)
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/Yp9H1Z2xNPr7XqZ88", use_container_width=True)
