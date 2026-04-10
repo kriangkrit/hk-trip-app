@@ -28,11 +28,11 @@ st.markdown("""
     .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
-    /* Custom Header Style - Set to White */
+    /* Custom Header Style - White & Small */
     .small-header {
         font-size: 16px;
         font-weight: 400;
-        color: #FFFFFF; /* เปลี่ยนเป็นสีขาว */
+        color: #FFFFFF; 
         margin-bottom: 15px;
         letter-spacing: 1px;
     }
@@ -48,7 +48,6 @@ st.markdown("""
         letter-spacing: 1px;
     }
     .plan-card {
-        background-color: transparent;
         border-left: 1px solid #ddd;
         padding: 0 0 25px 20px;
         margin-left: 5px;
@@ -102,7 +101,7 @@ try:
         text_cols = ['Item', 'Payer', 'Participants', 'Category', 'Note', 'Timestamp']
         for col in text_cols:
             if col in df.columns:
-                df[col] = df[col].astype(str).replace(['nan', 'None', 'None'], '')
+                df[col] = df[col].astype(str).replace(['nan', 'None'], '')
             else:
                 df[col] = ""
     else:
@@ -111,28 +110,20 @@ except Exception:
     df = pd.DataFrame(columns=["Timestamp", "Item", "Amount_HKD", "Payer", "Participants", "Category", "Is_Settled", "Note"])
 
 st.title("HK TRIP 2026")
-tab1, tab2, tab3 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY"])
+tab1, tab2, tab3, tab4 = st.tabs(["💰 EXPENSE", "📍 PLAN", "📊 SUMMARY", "🗺️ MAP"])
 
 # --- TAB 1: EXPENSE ---
 with tab1:
-    # --- ADD ITEM (White Header) ---
     st.markdown('<div class="small-header">ADD ITEM</div>', unsafe_allow_html=True)
     
     with st.form("add_form", clear_on_submit=True):
         item = st.text_input("What did you buy?", placeholder="e.g. Dim Sum")
-        
         c1, c2 = st.columns(2)
-        with c1: 
-            amount = st.number_input("Price (HKD)", min_value=0.0, step=1.0, format="%.0f")
-        with c2: 
-            payer = st.selectbox("Payer", members)
-            
+        with c1: amount = st.number_input("Price (HKD)", min_value=0.0, step=1.0, format="%.0f")
+        with c2: payer = st.selectbox("Payer", members)
         c3, c4 = st.columns(2)
-        with c3:
-            cat = st.selectbox("Category", categories)
-        with c4:
-            parts = st.multiselect("Split", members, default=members)
-            
+        with c3: cat = st.selectbox("Category", categories)
+        with c4: parts = st.multiselect("Split", members, default=members)
         note = st.text_input("Note", placeholder="Optional details...")
         settled = st.checkbox("Pre-paid (Settled)")
         
@@ -148,15 +139,13 @@ with tab1:
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                 st.rerun()
 
-    # --- Edit / Delete (In Expander) ---
     if not df.empty:
         st.write("")
         with st.expander("Edit / Delete"):
             options = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
-            selected = st.selectbox("Select entry to manage:", options)
+            selected = st.selectbox("Select entry:", options)
             idx = int(selected.split(":")[0])
             row = df.iloc[idx]
-
             col_e, col_d = st.columns(2)
             with col_d:
                 if st.button("DELETE", use_container_width=True):
@@ -165,7 +154,6 @@ with tab1:
                     st.rerun()
             with col_e:
                 edit_mode = st.toggle("EDIT")
-
             if edit_mode:
                 with st.form("edit_form"):
                     u_item = st.text_input("Item", value=str(row['Item']))
@@ -176,7 +164,6 @@ with tab1:
                     u_parts = st.multiselect("Split with", members, default=p_current)
                     u_note = st.text_input("Note", value=str(row['Note']))
                     u_settled = st.checkbox("Settled", value=bool(row['Is_Settled']))
-
                     if st.form_submit_button("UPDATE"):
                         df = df.astype(object)
                         df.at[idx, 'Item'] = str(u_item)
@@ -192,7 +179,7 @@ with tab1:
         st.divider()
         view_df = df.copy()
         view_df['Date'] = view_df['Timestamp'].astype(str).str.split().str[0]
-        st.dataframe(view_df.iloc[::-1][['Date', 'Item', 'Amount_HKD', 'Payer', 'Category']], use_container_width=True, hide_index=True)
+        st.dataframe(view_df.iloc[::-1][['Date', 'Item', 'Amount_HKD', 'Payer']], use_container_width=True, hide_index=True)
 
 # --- TAB 2: PLAN ---
 @st.dialog("VISUAL DIARY", width="large")
@@ -200,28 +187,17 @@ def show_diary_modal(img_url):
     st.image(img_url, use_container_width=True)
 
 with tab2:
-    img_url = "https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png"
     if st.button("VIEW VISUAL DIARY", use_container_width=True):
-        show_diary_modal(img_url)
-
+        show_diary_modal("https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png")
     try:
-        df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0)
-        df_plan = df_plan.dropna(subset=['Day', 'Location'], how='all')
+        df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0).dropna(subset=['Day', 'Location'], how='all')
         if not df_plan.empty:
             df_plan['Day'] = pd.to_numeric(df_plan['Day'], errors='coerce').fillna(0).astype(int)
             for day in sorted(df_plan['Day'].unique()):
                 st.markdown(f"<div class='day-header'>DAY {day}</div>", unsafe_allow_html=True)
-                day_data = df_plan[df_plan['Day'] == day]
-                for _, r in day_data.iterrows():
-                    time_val = r['Time'] if pd.notna(r['Time']) else ""
-                    loc_val = r['Location'] if pd.notna(r['Location']) else ""
-                    st.markdown(f'''
-                        <div class="plan-card">
-                            <div class="time-text">{time_val}</div>
-                            <div class="location-text">{loc_val}</div>
-                        </div>
-                    ''', unsafe_allow_html=True)
-    except Exception:
+                for _, r in df_plan[df_plan['Day'] == day].iterrows():
+                    st.markdown(f'<div class="plan-card"><div class="time-text">{r["Time"]}</div><div class="location-text">{r["Location"]}</div></div>', unsafe_allow_html=True)
+    except:
         st.info("Check 'Itinerary' sheet for plan details.")
 
 # --- TAB 3: SUMMARY ---
@@ -230,11 +206,9 @@ with tab3:
         sum_df = df.copy()
         sum_df['Amount_HKD'] = pd.to_numeric(sum_df['Amount_HKD'])
         fig = px.pie(sum_df, values='Amount_HKD', names='Category', hole=0.6, color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig.update_layout(margin=dict(t=20, b=20, l=20, r=20))
         st.plotly_chart(fig, use_container_width=True)
         
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5)
-        
         balances = {m: 0.0 for m in members}
         for _, r in sum_df[sum_df['Is_Settled'] == False].iterrows():
             balances[r['Payer']] += float(r['Amount_HKD'])
@@ -258,15 +232,30 @@ with tab3:
 
         st.markdown(f"""
             <div class="mobile-flex-container">
-                <div class="flex-item-box">
-                    <div class="member-label">KK</div>
-                    <div class="item-text-centered">{'<br>'.join(u_list['KK']) if u_list['KK'] else '-'}</div>
-                </div>
-                <div class="flex-item-box">
-                    <div class="member-label">Charlie</div>
-                    <div class="item-text-centered">{'<br>'.join(u_list['Charlie']) if u_list['Charlie'] else '-'}</div>
-                </div>
+                <div class="flex-item-box"><div class="member-label">KK</div><div class="item-text-centered">{'<br>'.join(u_list['KK']) if u_list['KK'] else '-'}</div></div>
+                <div class="flex-item-box"><div class="member-label">Charlie</div><div class="item-text-centered">{'<br>'.join(u_list['Charlie']) if u_list['Charlie'] else '-'}</div></div>
             </div>
         """, unsafe_allow_html=True)
     else:
         st.info("No expense data found.")
+
+# --- TAB 4: MAP ---
+with tab4:
+    st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
+    
+    # ลิงก์สำหรับแสดง Google Maps หน้าหลัก (ฮ่องกง)
+    maps_url = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m12!114.1200!22.2500!114.2200!22.3500!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403e29f3730302b%3A0xe67c062ca1383e58!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1710000000000!5m2!1sen!2sth"
+
+    st.markdown(f"""
+        <iframe 
+            src="{maps_url}" 
+            width="100%" 
+            height="600" 
+            style="border:0; border-radius:15px;" 
+            allowfullscreen="" 
+            loading="lazy">
+        </iframe>
+    """, unsafe_allow_html=True)
+    
+    st.write("")
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/search/Hong+Kong", use_container_width=True)
