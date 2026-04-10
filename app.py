@@ -25,8 +25,22 @@ st.markdown("""
 
     h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
     
-    .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; }
+    /* สไตล์ปุ่มทั่วไป */
+    .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; color: #444; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
+
+    /* 🎯🎯🎯 ส่วนที่เพิ่มใหม่: เปลี่ยนสีปุ่ม VIEW VISUAL DIARY เป็นสีเทา 🎯🎯🎯 */
+    div.stButton > button[p-id*="view_visual_diary"] {
+        background-color: #f0f0f0 !important; /* สีพื้นหลังเทาอ่อน */
+        color: #666 !important; /* สีตัวอักษรเทาเข้ม */
+        border: 1px solid #ddd !important; /* เส้นขอบเทา */
+    }
+    /* เอฟเฟกต์เมื่อเอาเมาส์ไปวาง (Hover) */
+    div.stButton > button[p-id*="view_visual_diary"]:hover {
+        background-color: #e0e0e0 !important; /* เทาเข้มขึ้นเล็กน้อย */
+        color: #333 !important;
+    }
+    /* 🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯 */
 
     .small-header {
         font-size: 16px;
