@@ -32,42 +32,16 @@ st.markdown("""
         font-size: 16px;
         font-weight: 400;
         color: #444; 
-        margin-bottom: 15px;
+        margin: 20px 0 10px 0;
         letter-spacing: 1px;
     }
 
-    /* Timeline Styles */
-    .day-header {
-        font-size: 16px;
-        font-weight: 400;
-        color: #222;
-        margin: 30px 0 15px 0;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 5px;
-    }
-    .plan-card {
-        border-left: 1px solid #ddd;
-        padding: 0 0 25px 20px;
-        margin-left: 5px;
-        position: relative;
-    }
-    .plan-card::before {
-        content: '';
-        position: absolute;
-        left: -4px;
-        top: 4px;
-        width: 7px;
-        height: 7px;
-        background-color: #bbb;
-        border-radius: 50%;
-    }
-    .time-text { font-size: 11px; color: #aaa; }
-    .location-text { font-size: 14px; color: #444; }
+    /* Table Styling */
+    .stDataFrame { border: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
 # --- Connection ---
-# อย่าลืมแชร์สิทธิ์ Editor ให้กับ email ของ service account ด้วยนะครับ
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1_lDyCMogHXKLfSetDj8QzejELtAIB4CQ6xk1LrBSZGc/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -106,7 +80,6 @@ with tab1:
         settled = st.checkbox("Pre-paid (Settled)")
         if st.form_submit_button("SAVE"):
             if item and amount >= 0:
-                # ใช้เวลาไทย GMT+7
                 now = (datetime.utcnow() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M")
                 new_row = pd.DataFrame([{"Timestamp": now, "Item": str(item), "Amount_HKD": float(amount), "Payer": str(payer), "Participants": ", ".join(parts), "Category": str(cat), "Is_Settled": bool(settled), "Note": str(note)}])
                 df = pd.concat([df, new_row], ignore_index=True)
@@ -149,12 +122,7 @@ with tab1:
         st.dataframe(df.iloc[::-1][['Timestamp', 'Item', 'Amount_HKD', 'Payer']], use_container_width=True, hide_index=True)
 
 # --- TAB 2: PLAN ---
-@st.dialog("VISUAL DIARY", width="large")
-def show_diary(url): st.image(url, use_container_width=True)
-
 with tab2:
-    if st.button("VIEW VISUAL DIARY", use_container_width=True):
-        show_diary("https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png")
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0).dropna(subset=['Day', 'Location'], how='all')
         if not df_plan.empty:
@@ -167,15 +135,14 @@ with tab2:
 
 # --- TAB 3: SUMMARY ---
 with tab3:
-    if not df.empty and pd.to_numeric(df['Amount_HKD']).sum() > 0:
-        # กราฟสรุปรายจ่ายตามหมวดหมู่
-        fig = px.pie(df, values='Amount_HKD', names='Category', hole=0.6, color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig.update_layout(margin=dict(t=0, b=0, l=0, r=0), height=300)
+    if not df.empty:
+        # 1. กราฟวงกลม
+        fig = px.pie(df, values='Amount_HKD', names='Category', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
+        fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300, showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
-        
+
+        # 2. การคำนวณเงินโอน (Settlement)
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5)
-        
-        # คำนวณยอดค้างจ่าย (Settlement)
         bal = {m: 0.0 for m in members}
         for _, r in df[df['Is_Settled'] == False].iterrows():
             bal[r['Payer']] += float(r['Amount_HKD'])
@@ -183,63 +150,44 @@ with tab3:
             if p_list:
                 share = float(r['Amount_HKD']) / len(p_list)
                 for p in p_list: bal[p] -= share
-        
+
         st.divider()
         c1, c2 = st.columns(2)
-        # ตัวเลขที่ต้องโอน (ยึดตาม KK เป็นหลัก)
         transfer_hkd = abs(bal['KK'])
         c1.metric("TRANSFER (HKD)", f"{transfer_hkd:,.2f}")
         c2.metric("TRANSFER (THB)", f"{transfer_hkd * rate:,.0f}")
         
-        if bal['KK'] > 0:
-            st.info(f"💡 **Charlie → KK**")
-        elif bal['KK'] < 0:
-            st.info(f"💡 **KK → Charlie**")
-        else:
-            st.info("✅ **Balanced**")
+        if bal['KK'] > 0: st.info("💡 Charlie → KK")
+        elif bal['KK'] < 0: st.info("💡 KK → Charlie")
+        else: st.success("✅ ทุกคนจ่ายเท่ากันพอดี")
 
-        # --- เพิ่มส่วน: แต่ละคนจ่ายอะไรไปบ้าง ---
-        st.write("")
-        st.markdown('<div class="small-header">PAYMENT HISTORY</div>', unsafe_allow_html=True)
+        # 3. สรุปยอดจ่ายจริงของแต่ละคน (Who Paid How Much)
+        st.markdown('<div class="small-header">WHO PAID HOW MUCH?</div>', unsafe_allow_html=True)
         
-        for member in members:
-            # ใช้ Expander แยกตามรายชื่อคน
-            with st.expander(f"Items paid by {member}"):
-                member_paid_df = df[df['Payer'] == member][['Item', 'Amount_HKD', 'Category', 'Timestamp']]
-                if not member_paid_df.empty:
-                    # แสดงตารางรายการที่คนนั้นจ่าย
-                    st.dataframe(
-                        member_paid_df.sort_index(ascending=False), 
-                        use_container_width=True, 
-                        hide_index=True
-                    )
-                    # สรุปยอดรวมที่ควักกระเป๋าจ่ายไป
-                    total_paid = member_paid_df['Amount_HKD'].sum()
-                    st.markdown(f"**Total Out-of-Pocket:** `{total_paid:,.2f} HKD`")
+        # คำนวณยอดรวมที่แต่ละคนควักกระเป๋าจ่ายไปจริงๆ (Out-of-Pocket)
+        summary_data = []
+        for m in members:
+            total_paid = df[df['Payer'] == m]['Amount_HKD'].sum()
+            summary_data.append({"Member": m, "Total Paid (HKD)": total_paid})
+        
+        summary_df = pd.DataFrame(summary_data)
+        st.table(summary_df.set_index('Member'))
+
+        # 4. ประวัติการจ่ายเงินแยกคน (Detailed History per Payer)
+        st.markdown('<div class="small-header">PAYMENT LOG</div>', unsafe_allow_html=True)
+        for m in members:
+            with st.expander(f"Items paid by {m}"):
+                personal_df = df[df['Payer'] == m][['Item', 'Amount_HKD', 'Category', 'Timestamp']]
+                if not personal_df.empty:
+                    st.dataframe(personal_df.sort_index(ascending=False), use_container_width=True, hide_index=True)
+                    st.markdown(f"**Sum:** `{personal_df['Amount_HKD'].sum():,.2f} HKD`")
                 else:
-                    st.caption("No payments recorded.")
-                    
-    else: 
-        st.info("No data available yet. Start by adding expenses in the first tab!")
+                    st.caption("No items found.")
+    else:
+        st.info("ไม่มีข้อมูลการใช้จ่าย")
 
 # --- TAB 4: MAP ---
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
-    
-    # วาง URL ส่วน src จาก iframe ของคุณที่นี่
-    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118147.68202111151!2d114.113264426462!3d22.29255137839603!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f00840130971%3A0x2aaa7e407338e3e4!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1700000000000!5m2!1sen!2sth"
-
-    st.markdown(f"""
-        <iframe 
-            src="{maps_src}" 
-            width="100%" 
-            height="450" 
-            style="border:0; border-radius:15px; background-color: #f0f0f0;" 
-            allowfullscreen="" 
-            loading="lazy" 
-            referrerpolicy="no-referrer-when-downgrade">
-        </iframe>
-    """, unsafe_allow_html=True)
-    
-    st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/xxxx", use_container_width=True)
+    maps_src = "YOUR_GOOGLE_MAPS_EMBED_URL_HERE" # เปลี่ยนเป็น URL ของคุณ
+    st.markdown(f'<iframe src="{maps_src}" width="100%" height="500" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', unsafe_allow_html=True)
