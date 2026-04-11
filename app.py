@@ -194,11 +194,12 @@ with tab1:
         st.divider()
         st.dataframe(df.iloc[::-1][['Timestamp', 'Item', 'Amount_HKD', 'Payer']], use_container_width=True, hide_index=True)
 
-# --- TAB 2: PLAN ---
+# --- TAB 2: PLAN (ฉบับปุ่มต่อท้าย มินิมอลสุดๆ) ---
 @st.dialog("VISUAL DIARY", width="large")
 def show_diary(url): st.image(url, use_container_width=True)
 
 with tab2:
+    # ปุ่ม Visual Diary ด้านบนสุด
     if st.button("VIEW VISUAL DIARY", use_container_width=True):
         show_diary("https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png")
     
@@ -210,20 +211,32 @@ with tab2:
             
             for d in sorted(df_plan['Day'].unique()):
                 st.markdown(f"<div class='day-header'>DAY {d}</div>", unsafe_allow_html=True)
+                
                 for i, r in df_plan[df_plan['Day'] == d].iterrows():
-                    st.markdown(f'''
-                        <div class="plan-card">
-                            <div class="time-text">{r["Time"]}</div>
-                            <div class="location-text">{r["Location"]}</div>
-                        </div>
-                    ''', unsafe_allow_html=True)
+                    # สร้าง Column สัดส่วน 80:20 (ปรับได้ตามความยาวของชื่อสถานที่)
+                    c_txt, c_btn = st.columns([0.82, 0.18])
                     
-                    if 'Directions_URL' in df_plan.columns:
-                        url = r['Directions_URL']
-                        if pd.notna(url) and str(url).startswith('http'):
-                            # ใช้ key เฉพาะเพื่อให้ CSS จับไปแต่งให้เล็กได้
-                            st.link_button("Get Directions", url, key=f"get_dir_{i}")
-                            st.write("") 
+                    with c_txt:
+                        # แสดงเวลาและสถานที่ (เอา Margin ล่างออกเล็กน้อยเพื่อให้ปุ่มดูอยู่ระดับเดียวกัน)
+                        st.markdown(f'''
+                            <div class="plan-card" style="padding-bottom: 5px;">
+                                <div class="time-text">{r["Time"]}</div>
+                                <div class="location-text">{r["Location"]}</div>
+                            </div>
+                        ''', unsafe_allow_html=True)
+                    
+                    with c_btn:
+                        # ตรวจสอบลิงก์นำทาง
+                        if 'Directions_URL' in df_plan.columns:
+                            url = r['Directions_URL']
+                            if pd.notna(url) and str(url).startswith('http'):
+                                # ดันปุ่มลงมาเล็กน้อยให้ขนานกับบรรทัดชื่อสถานที่
+                                st.markdown('<div style="margin-top: 18px;"></div>', unsafe_allow_html=True)
+                                st.link_button("DIR", url, key=f"get_dir_{i}")
+                    
+                    # เพิ่มช่องว่างเล็กน้อยระหว่างรายการ
+                    st.write("") 
+
     except Exception as e: 
         st.info(f"Check 'Itinerary' sheet. ({e})")
 
