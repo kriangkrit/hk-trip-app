@@ -25,27 +25,27 @@ st.markdown("""
 
     h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
     
-    /* สไตล์ปุ่มทั่วไป */
+    /* สไตล์ปุ่มทั่วไป (Get Directions จะใช้สไตล์นี้) */
     .stButton>button { 
         border-radius: 12px; 
-        border: 0.5px solid #eee; 
-        background-color: #ffffff; 
+        border: 1px solid #eee !important; 
+        background-color: #f8f8f8 !important; /* เปลี่ยนเป็นสีเทาอ่อน */
         width: 100%; 
-        color: #666;
+        color: #888 !important; /* สีตัวอักษรเทาเข้มขึ้นเล็กน้อย */
         font-family: 'Anuphan', sans-serif !important;
         font-weight: 300 !important;
-        text-transform: none !important; /* ไม่เป็นตัวพิมพ์ใหญ่ทั้งหมด */
+        text-transform: none !important;
+        transition: 0.3s;
+    }
+
+    /* เอฟเฟกต์เมื่อ Hover */
+    .stButton>button:hover {
+        background-color: #f0f0f0 !important;
+        border-color: #ddd !important;
+        color: #666 !important;
     }
     
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
-
-    /* ปรับแต่งปุ่ม VIEW VISUAL DIARY เฉพาะกิจให้เป็นสีเทา */
-    div.stButton > button:has(div:contains("VIEW VISUAL DIARY")) {
-        background-color: #f8f8f8 !important;
-        color: #888 !important;
-        border: 1px solid #eee !important;
-        font-size: 12px !important;
-    }
 
     .small-header {
         font-size: 16px;
@@ -194,14 +194,12 @@ with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0).dropna(subset=['Day', 'Location'], how='all')
         if not df_plan.empty:
-            # ล้างช่องว่างที่อาจติดมากับชื่อคอลัมน์
             df_plan.columns = [c.strip() for c in df_plan.columns]
             df_plan['Day'] = pd.to_numeric(df_plan['Day'], errors='coerce').fillna(0).astype(int)
             
             for d in sorted(df_plan['Day'].unique()):
                 st.markdown(f"<div class='day-header'>DAY {d}</div>", unsafe_allow_html=True)
                 for _, r in df_plan[df_plan['Day'] == d].iterrows():
-                    # รายการหลัก
                     st.markdown(f'''
                         <div class="plan-card">
                             <div class="time-text">{r["Time"]}</div>
@@ -209,7 +207,6 @@ with tab2:
                         </div>
                     ''', unsafe_allow_html=True)
                     
-                    # ปุ่ม Get Directions ภาษาอังกฤษล้วน ตัวบางเหมือนรายการหลัก
                     if 'Directions_URL' in df_plan.columns:
                         url = r['Directions_URL']
                         if pd.notna(url) and str(url).startswith('http'):
@@ -288,7 +285,7 @@ with tab3:
 # --- TAB 4: MAP ---
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
-    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118147.68202061385!2d114.120063!3d22.285522!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f07476209597%3A0x846ca60473b0173!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1715600000000!5m2!1sen!2sth"
+    maps_src = "https://www.google.com/maps/dir/Noble+Park+Hotel,+2+Mau+Lam+Street,+Yau+Ma+Tei,+Hong+Kong/Sha+Tin+Che+Kung+Temple,+7+Che+Kung+Miu+Road,+Sha+Tin,+Hong+Kong/data=!4m14!4m13!1m5!1m1!19sChIJFZ8JbOoABDQRmgGviR3TCEM!2m2!1d114.1719067!2d22.3075623!1m5!1m1!19sChIJyXIWeQcHBDQRAmd5ZYFLrXc!2m2!1d114.182831!2d22.373419!3e37"
     st.markdown(f'<iframe src="{maps_src}" width="100%" height="450" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', unsafe_allow_html=True)
     st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/9ZpL9K9v9Jp8Jp8Jp8", use_container_width=True)
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/dir/Noble+Park+Hotel,+2+Mau+Lam+Street,+Yau+Ma+Tei,+Hong+Kong/Sha+Tin+Che+Kung+Temple,+7+Che+Kung+Miu+Road,+Sha+Tin,+Hong+Kong/data=!4m14!4m13!1m5!1m1!19sChIJFZ8JbOoABDQRmgGviR3TCEM!2m2!1d114.1719067!2d22.3075623!1m5!1m1!19sChIJyXIWeQcHBDQRAmd5ZYFLrXc!2m2!1d114.182831!2d22.373419!3e38", use_container_width=True)
