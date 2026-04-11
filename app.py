@@ -26,10 +26,20 @@ st.markdown("""
     h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
     
     /* สไตล์ปุ่มทั่วไป */
-    .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; color: #444; }
+    .stButton>button { 
+        border-radius: 12px; 
+        border: 0.5px solid #eee; 
+        background-color: #ffffff; 
+        width: 100%; 
+        color: #666;
+        font-family: 'Anuphan', sans-serif !important;
+        font-weight: 300 !important;
+        text-transform: none !important; /* ไม่เป็นตัวพิมพ์ใหญ่ทั้งหมด */
+    }
+    
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
-    /* เปลี่ยนสีปุ่ม VIEW VISUAL DIARY เป็นสีเทา */
+    /* ปรับแต่งปุ่ม VIEW VISUAL DIARY เฉพาะกิจให้เป็นสีเทา */
     div.stButton > button:has(div:contains("VIEW VISUAL DIARY")) {
         background-color: #f8f8f8 !important;
         color: #888 !important;
@@ -184,12 +194,14 @@ with tab2:
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0).dropna(subset=['Day', 'Location'], how='all')
         if not df_plan.empty:
+            # ล้างช่องว่างที่อาจติดมากับชื่อคอลัมน์
             df_plan.columns = [c.strip() for c in df_plan.columns]
             df_plan['Day'] = pd.to_numeric(df_plan['Day'], errors='coerce').fillna(0).astype(int)
             
             for d in sorted(df_plan['Day'].unique()):
                 st.markdown(f"<div class='day-header'>DAY {d}</div>", unsafe_allow_html=True)
                 for _, r in df_plan[df_plan['Day'] == d].iterrows():
+                    # รายการหลัก
                     st.markdown(f'''
                         <div class="plan-card">
                             <div class="time-text">{r["Time"]}</div>
@@ -197,12 +209,10 @@ with tab2:
                         </div>
                     ''', unsafe_allow_html=True)
                     
-                    # ส่วนของปุ่ม Directions ที่ปรับตามโจทย์
+                    # ปุ่ม Get Directions ภาษาอังกฤษล้วน ตัวบางเหมือนรายการหลัก
                     if 'Directions_URL' in df_plan.columns:
                         url = r['Directions_URL']
                         if pd.notna(url) and str(url).startswith('http'):
-                            # ใช้ข้อความ Get Directions ภาษาอังกฤษล้วน ไม่มีอิโมจิ
-                            # ปุ่มจะใช้ฟอนต์ Anuphan/Montserrat ตามที่ตั้งค่าไว้ใน CSS หลัก
                             st.link_button("Get Directions", url, use_container_width=True)
                             st.write("") 
     except Exception as e: 
@@ -278,7 +288,7 @@ with tab3:
 # --- TAB 4: MAP ---
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
-    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118128.82583804369!2d114.10323386629166!3d22.314842517871464!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f9f913619589%3A0x633190b2f8313426!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1711234567890!5m2!1sen!2sth"
+    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118147.68202061385!2d114.120063!3d22.285522!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f07476209597%3A0x846ca60473b0173!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1715600000000!5m2!1sen!2sth"
     st.markdown(f'<iframe src="{maps_src}" width="100%" height="450" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', unsafe_allow_html=True)
     st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/YfS59UfXkE4m4wNn8", use_container_width=True)
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/9ZpL9K9v9Jp8Jp8Jp8", use_container_width=True)
