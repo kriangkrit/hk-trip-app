@@ -186,22 +186,37 @@ with tab1:
         st.divider()
         st.dataframe(df.iloc[::-1][['Timestamp', 'Item', 'Amount_HKD', 'Payer']], use_container_width=True, hide_index=True)
 
-# --- TAB 2: PLAN ---
-@st.dialog("VISUAL DIARY", width="large")
-def show_diary(url): st.image(url, use_container_width=True)
-
+# --- TAB 2: PLAN (ปรับปรุงเพื่อใส่ Directions) ---
 with tab2:
     if st.button("VIEW VISUAL DIARY", use_container_width=True):
         show_diary("https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png")
+    
     try:
+        # อ่านข้อมูลจาก Sheet 'Itinerary'
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0).dropna(subset=['Day', 'Location'], how='all')
+        
         if not df_plan.empty:
             df_plan['Day'] = pd.to_numeric(df_plan['Day'], errors='coerce').fillna(0).astype(int)
+            
             for d in sorted(df_plan['Day'].unique()):
                 st.markdown(f"<div class='day-header'>DAY {d}</div>", unsafe_allow_html=True)
-                for _, r in df_plan[df_plan['Day'] == d].iterrows():
-                    st.markdown(f'<div class="plan-card"><div class="time-text">{r["Time"]}</div><div class="location-text">{r["Location"]}</div></div>', unsafe_allow_html=True)
-    except: st.info("Check 'Itinerary' sheet.")
+                
+                day_data = df_plan[df_plan['Day'] == d]
+                for _, r in day_data.iterrows():
+                    # แสดงชื่อสถานที่และการ์ดแบบเดิม
+                    st.markdown(f'''
+                        <div class="plan-card">
+                            <div class="time-text">{r["Time"]}</div>
+                            <div class="location-text">{r["Location"]}</div>
+                        </div>
+                    ''', unsafe_allow_html=True)
+                    
+                    # 🎯 เพิ่มปุ่มทางไปดูเส้นทาง (Directions) ถ้ามีลิงก์
+                    # ตรวจสอบว่าในไฟล์ Sheet มีคอลัมน์ชื่อ 'Directions_URL' หรือไม่
+                    if 'Directions_URL' in r and r['Directions_URL']:
+                        st.link_button(f"🧭 How to get to {r['Location']}", r['Directions_URL'], size="small")
+    except Exception as e:
+        st.info("Check 'Itinerary' sheet for 'Directions_URL' column.")
 
 # --- TAB 3: SUMMARY (UPDATED) ---
 with tab3:
