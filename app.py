@@ -232,7 +232,7 @@ with tab2:
                             if pd.notna(url) and str(url).startswith('http'):
                                 # ดันปุ่มลงมาเล็กน้อยให้ขนานกับบรรทัดชื่อสถานที่
                                 st.markdown('<div style="margin-top: 18px;"></div>', unsafe_allow_html=True)
-                                st.link_button("DIR", url, key=f"get_dir_{i}")
+                                st.link_button("GET", url, key=f"get_dir_{i}")
                     
                     # เพิ่มช่องว่างเล็กน้อยระหว่างรายการ
                     st.write("") 
