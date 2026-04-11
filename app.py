@@ -186,13 +186,16 @@ with tab1:
         st.divider()
         st.dataframe(df.iloc[::-1][['Timestamp', 'Item', 'Amount_HKD', 'Payer']], use_container_width=True, hide_index=True)
 
-# --- TAB 2: PLAN (ปรับปรุงเพื่อใส่ Directions) ---
+# --- TAB 2: PLAN ---
+@st.dialog("VISUAL DIARY", width="large")
+def show_diary(url): st.image(url, use_container_width=True)
+
 with tab2:
     if st.button("VIEW VISUAL DIARY", use_container_width=True):
         show_diary("https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png")
     
     try:
-        # อ่านข้อมูลจาก Sheet 'Itinerary'
+        # อ่านข้อมูลและจัดการค่าว่าง
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0).dropna(subset=['Day', 'Location'], how='all')
         
         if not df_plan.empty:
@@ -201,9 +204,8 @@ with tab2:
             for d in sorted(df_plan['Day'].unique()):
                 st.markdown(f"<div class='day-header'>DAY {d}</div>", unsafe_allow_html=True)
                 
-                day_data = df_plan[df_plan['Day'] == d]
-                for _, r in day_data.iterrows():
-                    # แสดงชื่อสถานที่และการ์ดแบบเดิม
+                for _, r in df_plan[df_plan['Day'] == d].iterrows():
+                    # 1. แสดงรายละเอียดสถานที่ (แบบเดิม)
                     st.markdown(f'''
                         <div class="plan-card">
                             <div class="time-text">{r["Time"]}</div>
@@ -211,12 +213,15 @@ with tab2:
                         </div>
                     ''', unsafe_allow_html=True)
                     
-                    # 🎯 เพิ่มปุ่มทางไปดูเส้นทาง (Directions) ถ้ามีลิงก์
-                    # ตรวจสอบว่าในไฟล์ Sheet มีคอลัมน์ชื่อ 'Directions_URL' หรือไม่
-                    if 'Directions_URL' in r and r['Directions_URL']:
-                        st.link_button(f"🧭 How to get to {r['Location']}", r['Directions_URL'], size="small")
+                    # 2. เพิ่มปุ่ม Directions แบบ Minimal (แสดงเฉพาะแถวที่มีลิงก์)
+                    # ใช้ปุ่มขนาดเล็ก (small) เพื่อไม่ให้แย่งความสนใจ
+                    url = r.get('Directions_URL')
+                    if pd.notna(url) and str(url).startswith('http'):
+                        st.link_button(f"🧭 ดูเส้นทางไป {r['Location'].split(':')[0]}", url, size="small")
+                        st.write("") # เพิ่มช่องว่างนิดหน่อยหลังปุ่ม
+                        
     except Exception as e:
-        st.info("Check 'Itinerary' sheet for 'Directions_URL' column.")
+        st.info("กรุณาตรวจสอบชื่อคอลัมน์ 'Directions_URL' ใน Sheet Itinerary")
 
 # --- TAB 3: SUMMARY (UPDATED) ---
 with tab3:
