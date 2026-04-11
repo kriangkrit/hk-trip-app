@@ -186,6 +186,7 @@ with tab2:
         if not df_plan.empty:
             df_plan.columns = [c.strip() for c in df_plan.columns]
             df_plan['Day'] = pd.to_numeric(df_plan['Day'], errors='coerce').fillna(0).astype(int)
+            
             for d in sorted(df_plan['Day'].unique()):
                 st.markdown(f"<div class='day-header'>DAY {d}</div>", unsafe_allow_html=True)
                 for _, r in df_plan[df_plan['Day'] == d].iterrows():
@@ -196,11 +197,14 @@ with tab2:
                         </div>
                     ''', unsafe_allow_html=True)
                     
+                    # ส่วนของปุ่ม Directions ที่ปรับตามโจทย์
                     if 'Directions_URL' in df_plan.columns:
                         url = r['Directions_URL']
                         if pd.notna(url) and str(url).startswith('http'):
-                            st.link_button(f"🧭 ดูเส้นทางไป {str(r['Location']).split(':')[0]}", url, use_container_width=True)
-                            st.write("")
+                            # ใช้ข้อความ Get Directions ภาษาอังกฤษล้วน ไม่มีอิโมจิ
+                            # ปุ่มจะใช้ฟอนต์ Anuphan/Montserrat ตามที่ตั้งค่าไว้ใน CSS หลัก
+                            st.link_button("Get Directions", url, use_container_width=True)
+                            st.write("") 
     except Exception as e: 
         st.info(f"Check 'Itinerary' sheet. ({e})")
 
