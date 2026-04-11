@@ -25,26 +25,35 @@ st.markdown("""
 
     h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
     
-    /* สไตล์ปุ่มทั่วไป (Get Directions จะใช้สไตล์นี้) */
+    /* 🎯 ปรับแต่งปุ่มให้ดูซอฟต์และมินิมอล (Get Directions) */
     .stButton>button { 
         border-radius: 12px; 
-        border: 1px solid #eee !important; 
-        background-color: #f8f8f8 !important; /* เปลี่ยนเป็นสีเทาอ่อน */
+        border: 1px solid #333 !important; /* เส้นขอบสีเข้มบางๆ */
+        background-color: #1a1a1a !important; /* พื้นหลังสีเทาเข้ม (เกือบดำ) ให้กลืนกับพื้นหลัง */
         width: 100%; 
-        color: #888 !important; /* สีตัวอักษรเทาเข้มขึ้นเล็กน้อย */
+        color: #888 !important; /* ตัวอักษรสีเทาซอฟต์ๆ */
         font-family: 'Anuphan', sans-serif !important;
         font-weight: 300 !important;
         text-transform: none !important;
         transition: 0.3s;
+        margin-top: -10px; /* ขยับขึ้นให้ใกล้กับรายการสถานที่ */
     }
 
-    /* เอฟเฟกต์เมื่อ Hover */
+    /* เอฟเฟกต์ตอนเอาเมาส์วาง (Hover) ให้สว่างขึ้นนิดเดียว */
     .stButton>button:hover {
-        background-color: #f0f0f0 !important;
-        border-color: #ddd !important;
-        color: #666 !important;
+        background-color: #252525 !important;
+        color: #aaa !important;
+        border-color: #444 !important;
     }
     
+    /* 🎯 ปรับแต่งปุ่ม VIEW VISUAL DIARY ให้แตกต่างเล็กน้อย (ถ้าต้องการ) */
+    div.stButton > button:has(div:contains("VIEW VISUAL DIARY")) {
+        background-color: #111 !important;
+        color: #666 !important;
+        font-size: 12px !important;
+        margin-bottom: 20px;
+    }
+
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
     .small-header {
@@ -59,13 +68,13 @@ st.markdown("""
     .day-header {
         font-size: 16px;
         font-weight: 400;
-        color: #222;
+        color: #eee; /* สีหัวข้อวันให้สว่างขึ้นในโหมดมืด */
         margin: 30px 0 15px 0;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid #333;
         padding-bottom: 5px;
     }
     .plan-card {
-        border-left: 1px solid #ddd;
+        border-left: 1px solid #333;
         padding: 0 0 20px 20px;
         margin-left: 5px;
         position: relative;
@@ -77,11 +86,11 @@ st.markdown("""
         top: 4px;
         width: 7px;
         height: 7px;
-        background-color: #bbb;
+        background-color: #555;
         border-radius: 50%;
     }
-    .time-text { font-size: 11px; color: #aaa; }
-    .location-text { font-size: 14px; color: #444; }
+    .time-text { font-size: 11px; color: #666; }
+    .location-text { font-size: 14px; color: #aaa; }
 
     /* Summary Mobile Styles */
     .mobile-flex-container {
@@ -93,10 +102,10 @@ st.markdown("""
     }
     .flex-item-box { flex: 1; text-align: center; }
     .member-label { 
-        font-size: 11px; color: #222; border-bottom: 0.5px solid #eee; 
+        font-size: 11px; color: #999; border-bottom: 0.5px solid #333; 
         display: inline-block; padding-bottom: 2px; margin-bottom: 5px;
     }
-    .item-text-centered { font-size: 10px; color: #999; line-height: 1.4; }
+    .item-text-centered { font-size: 10px; color: #666; line-height: 1.4; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -285,7 +294,6 @@ with tab3:
 # --- TAB 4: MAP ---
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
-    maps_src = "https://www.google.com/maps/dir/Noble+Park+Hotel,+2+Mau+Lam+Street,+Yau+Ma+Tei,+Hong+Kong/Sha+Tin+Che+Kung+Temple,+7+Che+Kung+Miu+Road,+Sha+Tin,+Hong+Kong/data=!4m14!4m13!1m5!1m1!19sChIJFZ8JbOoABDQRmgGviR3TCEM!2m2!1d114.1719067!2d22.3075623!1m5!1m1!19sChIJyXIWeQcHBDQRAmd5ZYFLrXc!2m2!1d114.182831!2d22.373419!3e37"
-    st.markdown(f'<iframe src="{maps_src}" width="100%" height="450" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', unsafe_allow_html=True)
-    st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/dir/Noble+Park+Hotel,+2+Mau+Lam+Street,+Yau+Ma+Tei,+Hong+Kong/Sha+Tin+Che+Kung+Temple,+7+Che+Kung+Miu+Road,+Sha+Tin,+Hong+Kong/data=!4m14!4m13!1m5!1m1!19sChIJFZ8JbOoABDQRmgGviR3TCEM!2m2!1d114.1719067!2d22.3075623!1m5!1m1!19sChIJyXIWeQcHBDQRAmd5ZYFLrXc!2m2!1d114.182831!2d22.373419!3e38", use_container_width=True)
+    # Placeholder สำหรับใส่ลิงก์แผนที่รวมถ้ามี
+    st.write("Google Maps link can be embedded here.")
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.google.com", use_container_width=True)
