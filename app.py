@@ -297,7 +297,19 @@ with tab3:
 # --- TAB 4: MAP ---
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
-    maps_src = "https://www.google.com/maps/dir/Noble+Park+Hotel,+2+Mau+Lam+Street,+Yau+Ma+Tei,+Hong+Kong/Sha+Tin+Che+Kung+Temple,+7+Che+Kung+Miu+Road,+Sha+Tin,+Hong+Kong/data=!4m14!4m13!1m5!1m1!19sChIJFZ8JbOoABDQRmgGviR3TCEM!2m2!1d114.1719067!2d22.3075623!1m5!1m1!19sChIJyXIWeQcHBDQRAmd5ZYFLrXc!2m2!1d114.182831!2d22.373419!3e39"
-    st.markdown(f'<iframe src="{maps_src}" width="100%" height="450" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', unsafe_allow_html=True)
+    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3691.802773295842!2d114.1672918!3d22.285493!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x340400631669463f%3A0x6ec040520623604f!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1712745582345!5m2!1sen!2sth"
+
+    st.markdown(f"""
+        <iframe 
+            src="{maps_src}" 
+            width="100%" 
+            height="550" 
+            style="border:0; border-radius:15px; background-color: #f0f0f0;" 
+            allowfullscreen="" 
+            loading="lazy" 
+            referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+    """, unsafe_allow_html=True)
+    
     st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/dir/Sha+Tin+Che+Kung+Temple,+7+Che+Kung+Miu+Road,+Sha+Tin,+Hong+Kong/%E9%A6%99%E6%B8%AF,+%E7%AB%B9%E5%9C%92,+%E7%AB%B9%E5%9C%92%E6%9D%91%E4%BA%8C%E8%99%9F,+Sik+Sik+Yuen+Wong+Tai+Sin+Temple/data=!4m14!4m13!1m5!1m1!19sChIJyXIWeQcHBDQRAmd5ZYFLrXc!2m2!1d114.182831!2d22.373419!1m5!1m1!19sChIJPyxIxtgGBDQRzvn_sxhWkTU!2m2!1d114.19325819999999!2d22.3427257!3e30", use_container_width=True)
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/kXvA6WfK3N5mYh9u8", use_container_width=True)
