@@ -25,27 +25,38 @@ st.markdown("""
 
     h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
     
-    /* สไตล์ปุ่มทั่วไป (Get Directions จะใช้สไตล์นี้) */
+    /* สไตล์ปุ่มมาตรฐาน */
     .stButton>button { 
         border-radius: 12px; 
         border: 1px solid #eee !important; 
-        background-color: #f8f8f8 !important; /* เปลี่ยนเป็นสีเทาอ่อน */
+        background-color: #ffffff; 
         width: 100%; 
-        color: #888 !important; /* สีตัวอักษรเทาเข้มขึ้นเล็กน้อย */
+        color: #666;
         font-family: 'Anuphan', sans-serif !important;
         font-weight: 300 !important;
         text-transform: none !important;
-        transition: 0.3s;
     }
 
-    /* เอฟเฟกต์เมื่อ Hover */
-    .stButton>button:hover {
-        background-color: #f0f0f0 !important;
-        border-color: #ddd !important;
-        color: #666 !important;
+    /* ปรับแต่งปุ่ม VIEW VISUAL DIARY ให้เป็นสีเทา */
+    div.stButton > button:has(div:contains("VIEW VISUAL DIARY")) {
+        background-color: #f8f8f8 !important;
+        color: #888 !important;
+        border: 1px solid #eee !important;
     }
-    
-    div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
+
+    /* 🎯 ปรับแต่งปุ่ม Get Directions ให้เล็กและมินิมอลเป็นพิเศษ */
+    div.stButton > button[p-id*="get_dir"] {
+        width: auto !important; 
+        padding: 0px 12px !important; 
+        min-height: 26px !important;
+        height: 26px !important;
+        font-size: 11px !important; 
+        background-color: #f8f8f8 !important;
+        color: #999 !important;
+        border-radius: 15px !important;
+        margin-left: 20px !important; /* เยื้องให้ตรงกับเนื้อหาในการ์ด */
+        border: 0.5px solid #eee !important;
+    }
 
     .small-header {
         font-size: 16px;
@@ -66,7 +77,7 @@ st.markdown("""
     }
     .plan-card {
         border-left: 1px solid #ddd;
-        padding: 0 0 20px 20px;
+        padding: 0 0 15px 20px;
         margin-left: 5px;
         position: relative;
     }
@@ -199,7 +210,7 @@ with tab2:
             
             for d in sorted(df_plan['Day'].unique()):
                 st.markdown(f"<div class='day-header'>DAY {d}</div>", unsafe_allow_html=True)
-                for _, r in df_plan[df_plan['Day'] == d].iterrows():
+                for i, r in df_plan[df_plan['Day'] == d].iterrows():
                     st.markdown(f'''
                         <div class="plan-card">
                             <div class="time-text">{r["Time"]}</div>
@@ -210,7 +221,8 @@ with tab2:
                     if 'Directions_URL' in df_plan.columns:
                         url = r['Directions_URL']
                         if pd.notna(url) and str(url).startswith('http'):
-                            st.link_button("Get Directions", url, use_container_width=True)
+                            # ใช้ key เฉพาะเพื่อให้ CSS จับไปแต่งให้เล็กได้
+                            st.link_button("Get Directions", url, key=f"get_dir_{i}")
                             st.write("") 
     except Exception as e: 
         st.info(f"Check 'Itinerary' sheet. ({e})")
@@ -285,7 +297,7 @@ with tab3:
 # --- TAB 4: MAP ---
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
-    maps_src = "https://www.google.com/maps/dir/Noble+Park+Hotel,+2+Mau+Lam+Street,+Yau+Ma+Tei,+Hong+Kong/Sha+Tin+Che+Kung+Temple,+7+Che+Kung+Miu+Road,+Sha+Tin,+Hong+Kong/data=!4m14!4m13!1m5!1m1!19sChIJFZ8JbOoABDQRmgGviR3TCEM!2m2!1d114.1719067!2d22.3075623!1m5!1m1!19sChIJyXIWeQcHBDQRAmd5ZYFLrXc!2m2!1d114.182831!2d22.373419!3e37"
+    maps_src = "https://www.google.com/maps/dir/Noble+Park+Hotel,+2+Mau+Lam+Street,+Yau+Ma+Tei,+Hong+Kong/Sha+Tin+Che+Kung+Temple,+7+Che+Kung+Miu+Road,+Sha+Tin,+Hong+Kong/data=!4m14!4m13!1m5!1m1!19sChIJFZ8JbOoABDQRmgGviR3TCEM!2m2!1d114.1719067!2d22.3075623!1m5!1m1!19sChIJyXIWeQcHBDQRAmd5ZYFLrXc!2m2!1d114.182831!2d22.373419!3e39"
     st.markdown(f'<iframe src="{maps_src}" width="100%" height="450" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', unsafe_allow_html=True)
     st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/dir/Noble+Park+Hotel,+2+Mau+Lam+Street,+Yau+Ma+Tei,+Hong+Kong/Sha+Tin+Che+Kung+Temple,+7+Che+Kung+Miu+Road,+Sha+Tin,+Hong+Kong/data=!4m14!4m13!1m5!1m1!19sChIJFZ8JbOoABDQRmgGviR3TCEM!2m2!1d114.1719067!2d22.3075623!1m5!1m1!19sChIJyXIWeQcHBDQRAmd5ZYFLrXc!2m2!1d114.182831!2d22.373419!3e38", use_container_width=True)
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://www.google.com/maps/dir/Sha+Tin+Che+Kung+Temple,+7+Che+Kung+Miu+Road,+Sha+Tin,+Hong+Kong/%E9%A6%99%E6%B8%AF,+%E7%AB%B9%E5%9C%92,+%E7%AB%B9%E5%9C%92%E6%9D%91%E4%BA%8C%E8%99%9F,+Sik+Sik+Yuen+Wong+Tai+Sin+Temple/data=!4m14!4m13!1m5!1m1!19sChIJyXIWeQcHBDQRAmd5ZYFLrXc!2m2!1d114.182831!2d22.373419!1m5!1m1!19sChIJPyxIxtgGBDQRzvn_sxhWkTU!2m2!1d114.19325819999999!2d22.3427257!3e30", use_container_width=True)
