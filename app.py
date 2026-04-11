@@ -29,18 +29,13 @@ st.markdown("""
     .stButton>button { border-radius: 12px; border: 0.5px solid #eee; background-color: #ffffff; width: 100%; color: #444; }
     div[data-baseweb="input"] { border-radius: 8px; border: 0.5px solid #f0f0f0; }
 
-    /* 🎯🎯🎯 ส่วนที่เพิ่มใหม่: เปลี่ยนสีปุ่ม VIEW VISUAL DIARY เป็นสีเทา 🎯🎯🎯 */
-    div.stButton > button[p-id*="view_visual_diary"] {
-        background-color: #f0f0f0 !important; /* สีพื้นหลังเทาอ่อน */
-        color: #666 !important; /* สีตัวอักษรเทาเข้ม */
-        border: 1px solid #ddd !important; /* เส้นขอบเทา */
+    /* เปลี่ยนสีปุ่ม VIEW VISUAL DIARY เป็นสีเทา */
+    div.stButton > button:has(div:contains("VIEW VISUAL DIARY")) {
+        background-color: #f8f8f8 !important;
+        color: #888 !important;
+        border: 1px solid #eee !important;
+        font-size: 12px !important;
     }
-    /* เอฟเฟกต์เมื่อเอาเมาส์ไปวาง (Hover) */
-    div.stButton > button[p-id*="view_visual_diary"]:hover {
-        background-color: #e0e0e0 !important; /* เทาเข้มขึ้นเล็กน้อย */
-        color: #333 !important;
-    }
-    /* 🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯 */
 
     .small-header {
         font-size: 16px;
@@ -61,7 +56,7 @@ st.markdown("""
     }
     .plan-card {
         border-left: 1px solid #ddd;
-        padding: 0 0 25px 20px;
+        padding: 0 0 20px 20px;
         margin-left: 5px;
         position: relative;
     }
@@ -107,7 +102,6 @@ try:
     df = conn.read(spreadsheet=SHEET_URL, worksheet=0, ttl=0).dropna(how='all')
     if not df.empty:
         df['Amount_HKD'] = pd.to_numeric(df['Amount_HKD'], errors='coerce').fillna(0)
-        # ทำความสะอาดข้อมูลเบื้องต้น
         for col in ['Item', 'Payer', 'Participants', 'Category', 'Note', 'Timestamp']:
             if col in df.columns:
                 df[col] = df[col].astype(str).replace(['nan', 'None'], '')
@@ -136,14 +130,9 @@ with tab1:
             if item and amount >= 0:
                 now = (datetime.utcnow() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M")
                 new_row = pd.DataFrame([{
-                    "Timestamp": now, 
-                    "Item": str(item), 
-                    "Amount_HKD": float(amount), 
-                    "Payer": str(payer), 
-                    "Participants": ", ".join(parts), 
-                    "Category": str(cat), 
-                    "Is_Settled": bool(settled), 
-                    "Note": str(note)
+                    "Timestamp": now, "Item": str(item), "Amount_HKD": float(amount), 
+                    "Payer": str(payer), "Participants": ", ".join(parts), 
+                    "Category": str(cat), "Is_Settled": bool(settled), "Note": str(note)
                 }])
                 df = pd.concat([df, new_row], ignore_index=True)
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
@@ -172,11 +161,9 @@ with tab1:
                     u_cat = st.selectbox("Category", categories, index=categories.index(row['Category']) if row['Category'] in categories else 0)
                     u_parts = st.multiselect("Split with", members, default=[p.strip() for p in str(row['Participants']).split(",") if p.strip() in members])
                     u_note = st.text_input("Note", value=str(row['Note']))
-                    # แปลงค่า Is_Settled ให้เป็น bool เพื่อใช้ใน checkbox
                     current_settled = str(row['Is_Settled']).upper() == 'TRUE' or row['Is_Settled'] == True
                     u_settled = st.checkbox("Settled", value=current_settled)
                     if st.form_submit_button("UPDATE"):
-                        df = df.astype(object)
                         df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'] = str(u_item), float(u_amt)
                         df.at[idx, 'Payer'], df.at[idx, 'Category'] = str(u_payer), str(u_cat)
                         df.at[idx, 'Participants'], df.at[idx, 'Note'] = ", ".join(u_parts), str(u_note)
@@ -186,25 +173,22 @@ with tab1:
         st.divider()
         st.dataframe(df.iloc[::-1][['Timestamp', 'Item', 'Amount_HKD', 'Payer']], use_container_width=True, hide_index=True)
 
+# --- TAB 2: PLAN ---
+@st.dialog("VISUAL DIARY", width="large")
+def show_diary(url): st.image(url, use_container_width=True)
+
 with tab2:
     if st.button("VIEW VISUAL DIARY", use_container_width=True):
         show_diary("https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png")
     
     try:
-        # อ่านข้อมูล Itinerary
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0).dropna(subset=['Day', 'Location'], how='all')
-        
         if not df_plan.empty:
-            # ล้างช่องว่างที่อาจติดมากับชื่อคอลัมน์ เช่น "Directions_URL " ให้เหลือแค่ "Directions_URL"
             df_plan.columns = [c.strip() for c in df_plan.columns]
-            
             df_plan['Day'] = pd.to_numeric(df_plan['Day'], errors='coerce').fillna(0).astype(int)
-            
             for d in sorted(df_plan['Day'].unique()):
                 st.markdown(f"<div class='day-header'>DAY {d}</div>", unsafe_allow_html=True)
-                
                 for _, r in df_plan[df_plan['Day'] == d].iterrows():
-                    # แสดงแผนการเดินทาง
                     st.markdown(f'''
                         <div class="plan-card">
                             <div class="time-text">{r["Time"]}</div>
@@ -212,36 +196,29 @@ with tab2:
                         </div>
                     ''', unsafe_allow_html=True)
                     
-                    # ตรวจสอบลิงก์นำทาง (ใช้ชื่อคอลัมน์ที่ล้างช่องว่างแล้ว)
                     if 'Directions_URL' in df_plan.columns:
                         url = r['Directions_URL']
                         if pd.notna(url) and str(url).startswith('http'):
-                            st.link_button(f"🧭 นำทางไปวัดที่ {d}", url, size="small")
-                            st.write("") 
+                            st.link_button(f"🧭 ดูเส้นทางไป {str(r['Location']).split(':')[0]}", url, use_container_width=True)
+                            st.write("")
+    except Exception as e: 
+        st.info(f"Check 'Itinerary' sheet. ({e})")
 
-    except Exception as e:
-        st.error(f"เกิดข้อผิดพลาด: {e}") # เปลี่ยนจาก info เป็น error เพื่อให้เห็นสาเหตุที่แท้จริง
-# --- TAB 3: SUMMARY (UPDATED) ---
+# --- TAB 3: SUMMARY ---
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
         cat_sum = cat_sum[cat_sum['Amount_HKD'] > 0]
-        
         if not cat_sum.empty:
-            # 1. Pie Chart
             fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
             fig.update_layout(showlegend=True, margin=dict(t=20, b=20, l=10, r=10), font=dict(family="Anuphan", size=14))
             st.plotly_chart(fig, use_container_width=True)
             
-            # 2. Table Breakdown
             st.markdown("<p style='font-weight:300;'>CATEGORY BREAKDOWN</p>", unsafe_allow_html=True)
             st.table(cat_sum.style.format({'Amount_HKD': '{:,.0f}'}))
             st.divider()
 
-            # 3. Settlement Calculation
             rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
-            
-            # Ensure Is_Settled is boolean for calculation
             df['Is_Settled_Bool'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
             
             bal = {m: 0.0 for m in members}
@@ -257,7 +234,6 @@ with tab3:
             c1, c2 = st.columns(2)
             c1.metric("TRANSFER (HKD)", f"{abs(diff):,.2f}")
             c2.metric("TRANSFER (THB)", f"{abs(diff)*rate:,.0f}")
-            
             if diff > 0.01: st.info("Charlie → KK")
             elif diff < -0.01: st.info("KK → Charlie")
             else: st.success("Balanced")
@@ -265,7 +241,6 @@ with tab3:
             st.markdown("<hr style='border: 0.5px solid #eee; margin-top: 30px; margin-bottom: 20px;'>", unsafe_allow_html=True)
             st.markdown("<p style='font-weight:300;'>NET SPEND PER PERSON</p>", unsafe_allow_html=True)
             
-            # 4. Usage Statistics
             usage = {m: 0.0 for m in members}
             user_items = {m: [] for m in members}
             for _, r in df.iterrows():
@@ -280,10 +255,8 @@ with tab3:
             usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
             st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
             
-            # 5. Mobile-Friendly Item Lists
             kk_items = ' • ' + ' <br> • '.join(user_items["KK"]) if user_items["KK"] else 'No items'
             charlie_items = ' • ' + ' <br> • '.join(user_items["Charlie"]) if user_items["Charlie"] else 'No items'
-
             st.markdown(f"""
                 <div class="mobile-flex-container">
                     <div class="flex-item-box">
@@ -296,26 +269,12 @@ with tab3:
                     </div>
                 </div>
             """, unsafe_allow_html=True)
-            
-    else:
-        st.info("No data.")
+    else: st.info("No data.")
 
 # --- TAB 4: MAP ---
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
-    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3691.802773295842!2d114.1672918!3d22.285493!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x340400631669463f%3A0x6ec040520623604f!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1712745582345!5m2!1sen!2sth"
-
-    st.markdown(f"""
-        <iframe 
-            src="{maps_src}" 
-            width="100%" 
-            height="550" 
-            style="border:0; border-radius:15px; background-color: #f0f0f0;" 
-            allowfullscreen="" 
-            loading="lazy" 
-            referrerpolicy="no-referrer-when-downgrade">
-        </iframe>
-    """, unsafe_allow_html=True)
-    
+    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118128.82583804369!2d114.10323386629166!3d22.314842517871464!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f9f913619589%3A0x633190b2f8313426!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1711234567890!5m2!1sen!2sth"
+    st.markdown(f'<iframe src="{maps_src}" width="100%" height="450" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', unsafe_allow_html=True)
     st.write("")
-    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/kXvA6WfK3N5mYh9u8", use_container_width=True)
+    st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.app.goo.gl/YfS59UfXkE4m4wNn8", use_container_width=True)
