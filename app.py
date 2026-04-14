@@ -23,6 +23,51 @@ st.markdown("""
     #MainMenu, footer, header { visibility: hidden; }
     .block-container { padding-top: 2rem; padding-left: 1rem; padding-right: 1rem; }
 
+    /* --- New Login UI Style --- */
+    .login-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 50px 20px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 30px;
+        border: 0.5px solid #eee;
+        margin-top: 50px;
+    }
+    
+    .login-title {
+        font-size: 28px;
+        font-weight: 200 !important;
+        letter-spacing: 8px;
+        color: #333;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+    }
+    
+    .login-subtitle {
+        font-size: 10px;
+        letter-spacing: 4px;
+        color: #aaa;
+        margin-bottom: 40px;
+        text-transform: uppercase;
+    }
+
+    /* สไตล์ช่อง Input ให้มินิมอล */
+    div[data-baseweb="input"] {
+        background-color: transparent !important;
+        border-radius: 0px !important;
+        border: none !important;
+        border-bottom: 0.5px solid #ddd !important;
+    }
+    
+    input {
+        text-align: center !important;
+        letter-spacing: 5px !important;
+        color: #555 !important;
+    }
+
+    /* --- Elements --- */
     h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
     
     .stButton>button { 
@@ -30,6 +75,13 @@ st.markdown("""
         background-color: #ffffff; width: 100%; color: #666;
         font-family: 'Anuphan', sans-serif !important; font-weight: 300 !important;
         text-transform: none !important;
+        transition: all 0.4s ease;
+    }
+    
+    .stButton>button:hover {
+        border: 1px solid #ccc !important;
+        background-color: #fafafa !important;
+        transform: translateY(-1px);
     }
 
     div.stButton > button:has(div:contains("VIEW VISUAL DIARY")) {
@@ -44,7 +96,6 @@ st.markdown("""
     }
 
     .small-header { font-size: 16px; font-weight: 400; color: #444; margin-bottom: 15px; letter-spacing: 1px; }
-
     .day-header { font-size: 16px; font-weight: 400; color: #222; margin: 30px 0 15px 0; border-bottom: 1px solid #eee; padding-bottom: 5px; }
     .plan-card { border-left: 1px solid #ddd; padding: 0 0 5px 20px; margin-left: 5px; position: relative; }
     .plan-card::before { content: ''; position: absolute; left: -4px; top: 4px; width: 7px; height: 7px; background-color: #bbb; border-radius: 50%; }
@@ -65,12 +116,22 @@ def check_password():
     if st.session_state.get("password_correct", False):
         return True
 
-    st.markdown("<h3 style='text-align: center; font-weight: 300; letter-spacing: 2px;'>ACCESS REQUIRED</h3>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        st.text_input("Password", type="password", on_change=password_entered, key="password")
+    # หน้า UI Login แบบเก๋ๆ
+    _, col, _ = st.columns([1, 4, 1])
+    with col:
+        st.markdown("""
+            <div class="login-container">
+                <div class="login-title">Hong Kong</div>
+                <div class="login-subtitle">A Visual Journey 2026</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # ช่องกรอกรหัสแบบไร้ขอบ (เหลือแค่เส้นใต้)
+        st.text_input("ACCESS CODE", type="password", on_change=password_entered, key="password", label_visibility="collapsed", placeholder="••••")
+        
         if "password_correct" in st.session_state and not st.session_state["password_correct"]:
-            st.error("😕 Incorrect password")
+            st.markdown("<p style='text-align:center; color:#ff9999; font-size:10px; letter-spacing:2px; margin-top:10px;'>ACCESS DENIED</p>", unsafe_allow_html=True)
+            
     return False
 
 if not check_password():
@@ -104,7 +165,6 @@ def embed_pdf(url):
 def show_diary(url): st.image(url, use_container_width=True)
 
 # --- Connection ---
-# ดึงค่า URL จาก Secrets เพื่อความปลอดภัย (ไม่ให้โชว์ในโค้ด GitHub)
 SHEET_URL = st.secrets["gsheets_url"]
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -315,10 +375,7 @@ with tab4:
 # --- TAB 5: FILES ---
 with tab5:
     st.markdown('<div class="small-header">TRAVEL DOCUMENTS</div>', unsafe_allow_html=True)
-    
-    # ดึงข้อมูล IDs จาก Secrets
     ids = st.secrets["drive_ids"]
-
     with st.expander("🏨 SHARED DOCUMENTS", expanded=True):
         if st.checkbox("Hong Kong Personal Travel Plan"):
             embed_pdf(f"https://drive.google.com/file/d/{ids['travel_plan']}/view")
@@ -326,7 +383,6 @@ with tab5:
             embed_pdf(f"https://drive.google.com/file/d/{ids['hotel_conf']}/view")
         if st.checkbox("Special Check-in"):
             embed_pdf(f"https://drive.google.com/file/d/{ids['check_in']}/view")
-
     with st.expander("👤 KK'S DOCUMENTS"):
         if st.checkbox("Disney Park Tickets - KK"):
             embed_pdf(f"https://drive.google.com/file/d/{ids['disney_ticket_kk']}/view")
@@ -338,7 +394,6 @@ with tab5:
             embed_pdf(f"https://drive.google.com/file/d/{ids['flight_go_kk']}/view")
         if st.checkbox("Flight Itinerary (HKG-DMK) - KK"):
             embed_pdf(f"https://drive.google.com/file/d/{ids['flight_back_kk']}/view")
-
     with st.expander("👤 CHARLIE'S DOCUMENTS"):
         if st.checkbox("Disney Park Tickets - TP"):
             embed_pdf(f"https://drive.google.com/file/d/{ids['disney_ticket_ch']}/view")
