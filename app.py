@@ -23,7 +23,7 @@ st.markdown("""
     #MainMenu, footer, header { visibility: hidden; }
     .block-container { padding-top: 2rem; padding-left: 1rem; padding-right: 1rem; }
 
-    /* --- Login UI Style --- */
+    /* --- New Login UI Style --- */
     .login-container {
         display: flex;
         flex-direction: column;
@@ -53,6 +53,7 @@ st.markdown("""
         text-transform: uppercase;
     }
 
+    /* สไตล์ช่อง Input ให้มินิมอล */
     div[data-baseweb="input"] {
         background-color: transparent !important;
         border-radius: 0px !important;
@@ -66,13 +67,14 @@ st.markdown("""
         color: #555 !important;
     }
 
-    /* --- General Elements --- */
+    /* --- Elements --- */
     h1 { font-weight: 300 !important; letter-spacing: 2px; text-align: center; text-transform: uppercase; margin-bottom: 2rem; }
     
     .stButton>button { 
         border-radius: 12px; border: 1px solid #eee !important; 
         background-color: #ffffff; width: 100%; color: #666;
         font-family: 'Anuphan', sans-serif !important; font-weight: 300 !important;
+        text-transform: none !important;
         transition: all 0.4s ease;
     }
     
@@ -82,16 +84,15 @@ st.markdown("""
         transform: translateY(-1px);
     }
 
-    /* Style สำหรับปุ่มใน Tab Files ให้เหมือน List */
-    div.stButton > button[p-id*="doc_btn"] {
-        border: none !important;
-        border-bottom: 0.5px solid #eee !important;
-        border-radius: 0px !important;
-        text-align: left !important;
-        justify-content: flex-start !important;
-        padding-left: 5px !important;
-        color: #555 !important;
-        background-color: transparent !important;
+    div.stButton > button:has(div:contains("VIEW VISUAL DIARY")) {
+        background-color: #f8f8f8 !important; color: #888 !important;
+    }
+
+    div.stButton > button[p-id*="get_dir"] {
+        width: auto !important; min-width: 45px !important; padding: 0px 5px !important; 
+        min-height: 22px !important; height: 22px !important; font-size: 10px !important; 
+        background-color: #f8f8f8 !important; color: #aaa !important;
+        border-radius: 6px !important; border: 0.5px solid #eee !important;
     }
 
     .small-header { font-size: 16px; font-weight: 400; color: #444; margin-bottom: 15px; letter-spacing: 1px; }
@@ -115,32 +116,55 @@ def check_password():
     if st.session_state.get("password_correct", False):
         return True
 
+    # หน้า UI Login แบบเก๋ๆ
     _, col, _ = st.columns([1, 4, 1])
     with col:
-        st.markdown('<div class="login-container"><div class="login-title">Hong Kong</div><div class="login-subtitle">A Visual Journey 2026</div></div>', unsafe_allow_html=True)
+        st.markdown("""
+            <div class="login-container">
+                <div class="login-title">Hong Kong</div>
+                <div class="login-subtitle">Journey 2026</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # ช่องกรอกรหัสแบบไร้ขอบ (เหลือแค่เส้นใต้)
         st.text_input("ACCESS CODE", type="password", on_change=password_entered, key="password", label_visibility="collapsed", placeholder="••••")
+        
         if "password_correct" in st.session_state and not st.session_state["password_correct"]:
             st.markdown("<p style='text-align:center; color:#ff9999; font-size:10px; letter-spacing:2px; margin-top:10px;'>ACCESS DENIED</p>", unsafe_allow_html=True)
+            
     return False
 
 if not check_password():
     st.stop()
 
 # --- Helper Functions ---
-@st.dialog("DOCUMENT VIEW", width="large")
-def show_doc_dialog(url, title):
-    url = url.strip()
-    st.link_button(f"📂 OPEN FULL DOCUMENT", url, use_container_width=True)
-    st.divider()
-    if "drive.google.com" in url:
-        if "/d/" in url:
-            file_id = url.split("/d/")[1].split("/")[0]
-        elif "id=" in url:
-            file_id = url.split("id=")[-1].split("&")[0]
-        embed_url = f"https://drive.google.com/file/d/{file_id}/preview"
-        st.markdown(f'<iframe src="{embed_url}" width="100%" height="500px" style="border: none; border-radius: 10px; background: #f9f9f9;"></iframe>', unsafe_allow_html=True)
-    else:
-        st.info("Preview not available.")
+def embed_pdf(url, title="Document"):
+    try:
+        url = url.strip()
+        # 1. สร้างปุ่มสำหรับเปิดไฟล์แยก (แก้ปัญหาเรื่อง Cookies ในมือถือได้ 100%)
+        st.link_button(f"📂 Open {title}", url, use_container_width=True)
+        
+        # 2. ส่วนของ iframe พรีวิว (เพื่อความสวยงาม ถ้าเปิดได้)
+        if "drive.google.com" in url:
+            if "/d/" in url:
+                file_id = url.split("/d/")[1].split("/")[0]
+            elif "id=" in url:
+                file_id = url.split("id=")[-1].split("&")[0]
+            else:
+                st.error("❌ Link format incorrect")
+                return
+            
+            embed_url = f"https://drive.google.com/file/d/{file_id}/preview"
+            st.markdown(f'''
+                <iframe src="{embed_url}" width="100%" height="450px" 
+                style="border: none; border-radius: 15px; background: #f9f9f9; margin-top: 10px;">
+                </iframe>
+                <div style="margin-bottom: 20px;"></div>
+            ''', unsafe_allow_html=True)
+        else:
+            st.warning("⚠️ Please use Google Drive link")
+    except Exception as e:
+        st.error(f"❌ Error: {e}")
 
 @st.dialog("VISUAL DIARY", width="large")
 def show_diary(url): st.image(url, use_container_width=True)
@@ -148,6 +172,7 @@ def show_diary(url): st.image(url, use_container_width=True)
 # --- Connection ---
 SHEET_URL = st.secrets["gsheets_url"]
 conn = st.connection("gsheets", type=GSheetsConnection)
+
 members = ["KK", "Charlie"]
 categories = ["Food", "Drinks", "Transport", "Shopping", "Hotel", "Flight", "Others"]
 
@@ -179,25 +204,36 @@ with tab1:
         if st.form_submit_button("SAVE"):
             if item and amount >= 0:
                 now = (datetime.utcnow() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M")
-                new_row = pd.DataFrame([{"Timestamp": now, "Item": str(item), "Amount_HKD": float(amount), "Payer": str(payer), "Participants": ", ".join(parts), "Category": str(cat), "Is_Settled": bool(settled), "Note": str(note)}])
-                df = pd.concat([df.astype(object), new_row], ignore_index=True)
+                new_row = pd.DataFrame([{
+                    "Timestamp": now, "Item": str(item), "Amount_HKD": float(amount), 
+                    "Payer": str(payer), "Participants": ", ".join(parts), 
+                    "Category": str(cat), "Is_Settled": bool(settled), "Note": str(note)
+                }])
+                df = df.astype(object)
+                df = pd.concat([df, new_row], ignore_index=True)
                 conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                 st.toast("Saved! 🥟")
                 st.rerun()
 
     if not df.empty:
+        st.write("")
         with st.expander("Edit / Delete"):
             options = [f"{i}: {row['Item']} ({row['Amount_HKD']})" for i, row in df.iterrows()]
             selected = st.selectbox("Select entry:", options)
             idx = int(selected.split(":")[0])
             row = df.iloc[idx]
             col_e, col_d = st.columns(2)
+            
             with col_d:
                 if st.button("DELETE", key=f"del_{idx}", use_container_width=True):
-                    df = df.astype(object).drop(idx).reset_index(drop=True)
+                    df = df.astype(object)
+                    df = df.drop(idx).reset_index(drop=True)
                     conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                     st.rerun()
-            with col_e: edit_mode = st.toggle("EDIT", key=f"tog_{idx}")
+            
+            with col_e:
+                edit_mode = st.toggle("EDIT", key=f"tog_{idx}")
+            
             if edit_mode:
                 with st.form("edit_form"):
                     u_item = st.text_input("Item", value=str(row['Item']))
@@ -206,10 +242,10 @@ with tab1:
                     u_cat = st.selectbox("Category", categories, index=categories.index(row['Category']) if row['Category'] in categories else 0)
                     u_parts = st.multiselect("Split with", members, default=[p.strip() for p in str(row['Participants']).split(",") if p.strip() in members])
                     u_note = st.text_input("Note", value=str(row['Note']))
-                    u_settled = st.checkbox("Settled", value=bool(row['Is_Settled']))
+                    current_settled = str(row['Is_Settled']).upper() == 'TRUE' or row['Is_Settled'] == True
+                    u_settled = st.checkbox("Settled", value=current_settled)
                     
                     if st.form_submit_button("UPDATE"):
-                        # แก้ไข TypeError โดยการแปลงเป็น object ก่อนอัปเดตค่า
                         df = df.astype(object)
                         df.at[idx, 'Item'] = str(u_item)
                         df.at[idx, 'Amount_HKD'] = float(u_amt)
@@ -218,28 +254,31 @@ with tab1:
                         df.at[idx, 'Participants'] = ", ".join(u_parts)
                         df.at[idx, 'Note'] = str(u_note)
                         df.at[idx, 'Is_Settled'] = bool(u_settled)
-                        
                         conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
                         st.success("Updated!")
                         st.rerun()
         st.divider()
         st.dataframe(df.iloc[::-1][['Timestamp', 'Item', 'Amount_HKD', 'Payer']], use_container_width=True, hide_index=True)
 
+
 # --- TAB 2: PLAN ---
 with tab2:
-    if st.button("VIEW VISUAL DIARY", use_container_width=True): show_diary("https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png")
+    if st.button("VIEW VISUAL DIARY", use_container_width=True):
+        show_diary("https://raw.githubusercontent.com/kriangkrit/hk-trip-app/main/unnamed.png")
     try:
         df_plan = conn.read(spreadsheet=SHEET_URL, worksheet="Itinerary", ttl=0).dropna(subset=['Day', 'Location'], how='all')
         if not df_plan.empty:
+            df_plan.columns = [c.strip() for c in df_plan.columns]
             for d in sorted(pd.to_numeric(df_plan['Day']).unique()):
                 st.markdown(f"<div class='day-header'>DAY {int(d)}</div>", unsafe_allow_html=True)
                 for i, r in df_plan[df_plan['Day'] == d].iterrows():
                     c_txt, c_btn = st.columns([0.82, 0.18])
-                    with c_txt: st.markdown(f'<div class="plan-card"><div class="time-text">{r["Time"]}</div><div class="location-text">{r["Location"]}</div></div>', unsafe_allow_html=True)
+                    with c_txt:
+                        st.markdown(f'<div class="plan-card"><div class="time-text">{r["Time"]}</div><div class="location-text">{r["Location"]}</div></div>', unsafe_allow_html=True)
                     with c_btn:
                         if 'Directions_URL' in df_plan.columns and pd.notna(r['Directions_URL']):
                             st.markdown('<div style="margin-top: 18px;"></div>', unsafe_allow_html=True)
-                            st.link_button("DIR", r['Directions_URL'], key=f"get_dir_{i}")
+                            st.link_button("GET", r['Directions_URL'], key=f"get_dir_{i}")
                     st.write("")
     except Exception as e: st.info(f"Check Itinerary: {e}")
 
@@ -247,55 +286,132 @@ with tab2:
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
-        fig = px.pie(cat_sum[cat_sum['Amount_HKD']>0], values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig.update_layout(showlegend=True, margin=dict(t=10, b=10, l=10, r=10), font=dict(family="Anuphan", size=12), legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
-        st.plotly_chart(fig, use_container_width=True)
-        st.table(cat_sum[cat_sum['Amount_HKD']>0].style.format({'Amount_HKD': '{:,.0f}'}))
-        
+        cat_sum = cat_sum[cat_sum['Amount_HKD'] > 0]
+        if not cat_sum.empty:
+            fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, 
+                         color_discrete_sequence=px.colors.qualitative.Pastel)
+            fig.update_layout(
+                showlegend=True, 
+                margin=dict(t=10, b=10, l=10, r=10), 
+                font=dict(family="Anuphan", size=12),
+                legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("<p style='font-size:10px; font-weight:300; letter-spacing:1.5px; text-align:center; color:#999; text-transform:uppercase;'>Category Breakdown</p>", unsafe_allow_html=True)
+            st.table(cat_sum.style.format({'Amount_HKD': '{:,.0f}'}))
+            st.divider()
+
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
+        df['Is_Settled_Bool'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
+        
         bal = {m: 0.0 for m in members}
-        for _, r in df[df['Is_Settled'].apply(lambda x: str(x).upper() != 'TRUE' and x != True)].iterrows():
+        for _, r in df[df['Is_Settled_Bool'] == False].iterrows():
             bal[r['Payer']] += float(r['Amount_HKD'])
             p_list = [p.strip() for p in str(r['Participants']).split(",") if p.strip()]
             if p_list:
                 share = float(r['Amount_HKD']) / len(p_list)
                 for p in p_list:
                     if p in bal: bal[p] -= share
-        
+
         diff = bal["KK"]
-        st.markdown(f'<div style="display: flex; justify-content: center; gap: 40px; margin: 20px 0;"><div style="text-align: center;"><p style="font-size: 10px; color: #999; text-transform: uppercase;">Transfer (HKD)</p><p style="font-size: 18px;">{abs(diff):,.2f}</p></div><div style="text-align: center;"><p style="font-size: 10px; color: #999; text-transform: uppercase;">Transfer (THB)</p><p style="font-size: 18px;">{abs(diff)*rate:,.0f}</p></div></div>', unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style="display: flex; justify-content: center; gap: 40px; margin: 20px 0; font-family: 'Anuphan', sans-serif;">
+                <div style="text-align: center;">
+                    <p style="font-size: 10px; color: #999; letter-spacing: 1px; margin-bottom: 5px; text-transform: uppercase;">Transfer (HKD)</p>
+                    <p style="font-size: 18px; font-weight: 300; color: #444; margin: 0;">{abs(diff):,.2f}</p>
+                </div>
+                <div style="text-align: center;">
+                    <p style="font-size: 10px; color: #999; letter-spacing: 1px; margin-bottom: 5px; text-transform: uppercase;">Transfer (THB)</p>
+                    <p style="font-size: 18px; font-weight: 300; color: #444; margin: 0;">{abs(diff)*rate:,.0f}</p>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
         if diff > 0.01: st.info("Charlie → KK")
         elif diff < -0.01: st.info("KK → Charlie")
         else: st.success("Balanced")
-    else: st.info("No data found.")
+
+        st.markdown("<hr style='border: 0.5px solid #eee; margin-top: 30px; margin-bottom: 20px;'>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:10px; font-weight:300; letter-spacing:1.5px; text-align:center; color:#999; text-transform:uppercase;'>Net Spend Per Person</p>", unsafe_allow_html=True)
+        
+        usage = {m: 0.0 for m in members}
+        user_items = {m: [] for m in members}
+        for _, r in df.iterrows():
+            p_list = [p.strip() for p in str(r['Participants']).split(",") if p.strip()]
+            if p_list:
+                share = float(r['Amount_HKD']) / len(p_list)
+                for p in p_list: 
+                    if p in usage: 
+                        usage[p] += share
+                        user_items[p].append(f"{r['Item']} ({share:,.0f})")
+        
+        usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
+        st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
+        st.write("") 
+        
+        kk_list = '<br>'.join([f"• {i}" for i in user_items["KK"]]) if user_items["KK"] else "None"
+        ch_list = '<br>'.join([f"• {i}" for i in user_items["Charlie"]]) if user_items["Charlie"] else "None"
+
+        st.markdown(f"""
+            <div style="display: flex; justify-content: center; align-items: flex-start; gap: 30px; font-family: 'Anuphan', sans-serif; margin-bottom: 40px;">
+                <div style="flex: 0 1 auto; min-width: 130px;">
+                    <p style="font-size: 10px; font-weight: 400; color: #aaa; text-align: center; margin-bottom: 12px; letter-spacing: 2px; text-transform: uppercase;">KK's Items</p>
+                    <div style="font-size: 11px; color: #777; line-height: 1.8; text-align: center; font-weight: 300;">{kk_list}</div>
+                </div>
+                <div style="width: 1px; height: 40px; background-color: #eee; align-self: center;"></div>
+                <div style="flex: 0 1 auto; min-width: 130px;">
+                    <p style="font-size: 10px; font-weight: 400; color: #aaa; text-align: center; margin-bottom: 12px; letter-spacing: 2px; text-transform: uppercase;">Charlie's Items</p>
+                    <div style="font-size: 11px; color: #777; line-height: 1.8; text-align: center; font-weight: 300;">{ch_list}</div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+            
+    else: 
+        st.info("No data found.")
 
 # --- TAB 4: MAP ---
 with tab4:
     st.markdown('<div class="small-header">GOOGLE MAPS</div>', unsafe_allow_html=True)
-    st.markdown(f'<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118147.68202022026!2d114.1160352!3d22.2922752!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f99e4369a19d%3A0x600913959da31416!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1710000000000!5m2!1sen!2sth" width="100%" height="450" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', unsafe_allow_html=True)
+    maps_src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118147.68202022026!2d114.1160352!3d22.2922752!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f99e4369a19d%3A0x600913959da31416!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1710000000000!5m2!1sen!2sth"
+    st.markdown(f'<iframe src="{maps_src}" width="100%" height="450" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', unsafe_allow_html=True)
+    st.write("")
     st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.google.com", use_container_width=True)
 
-# --- TAB 5: FILES ---
+# --- TAB 5: FILES (โค้ดใหม่ที่ใส่ทั้งสองอย่าง) ---
 with tab5:
     st.markdown('<div class="small-header">TRAVEL DOCUMENTS</div>', unsafe_allow_html=True)
-    ids = st.secrets["drive_ids"]
     
+    # ดึงข้อมูล IDs จาก Secrets
+    ids = st.secrets["drive_ids"]
+
     with st.expander("🏨 SHARED DOCUMENTS", expanded=True):
-        if st.button("📄 Hong Kong Personal Travel Plan", key="doc_btn_1", use_container_width=True):
-            show_doc_dialog(f"https://drive.google.com/file/d/{ids['travel_plan']}/view", "Travel Plan")
-        if st.button("📄 Hotel Confirmation", key="doc_btn_2", use_container_width=True):
-            show_doc_dialog(f"https://drive.google.com/file/d/{ids['hotel_conf']}/view", "Hotel Confirmation")
-        if st.button("📄 Special Check-in Info", key="doc_btn_3", use_container_width=True):
-            show_doc_dialog(f"https://drive.google.com/file/d/{ids['check_in']}/view", "Check-in")
+        if st.checkbox("Hong Kong Personal Travel Plan"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['travel_plan']}/view", "Travel Plan")
+        if st.checkbox("Hotel Confirmation"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['hotel_conf']}/view", "Hotel Confirmation")
+        if st.checkbox("Special Check-in"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['check_in']}/view", "Check-in Info")
 
     with st.expander("👤 KK'S DOCUMENTS"):
-        docs_kk = [("Disney Park Tickets", ids['disney_ticket_kk']), ("Disney Premier Access", ids['disney_access_kk']), ("Meal Voucher 3-in-1", ids['meal_kk']), ("Flight (DMK-HKG)", ids['flight_go_kk']), ("Flight (HKG-DMK)", ids['flight_back_kk'])]
-        for i, (name, d_id) in enumerate(docs_kk):
-            if st.button(f"📄 {name}", key=f"doc_btn_kk_{i}", use_container_width=True):
-                show_doc_dialog(f"https://drive.google.com/file/d/{d_id}/view", name)
+        if st.checkbox("Disney Park Tickets - KK"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_ticket_kk']}/view", "Disney Ticket (KK)")
+        if st.checkbox("Disney Premier Access - KK"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_access_kk']}/view", "Disney Access (KK)")
+        if st.checkbox("Meal Voucher 3-in-1 - KK"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['meal_kk']}/view", "Meal Voucher (KK)")
+        if st.checkbox("Flight (DMK-HKG) - KK"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_go_kk']}/view", "Flight Go (KK)")
+        if st.checkbox("Flight (HKG-DMK) - KK"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_back_kk']}/view", "Flight Back (KK)")
 
     with st.expander("👤 CHARLIE'S DOCUMENTS"):
-        docs_ch = [("Disney Park Tickets", ids['disney_ticket_ch']), ("Disney Premier Access", ids['disney_access_ch']), ("Meal Voucher 2-in-1", ids['meal_ch']), ("Flight (DMK-HKG)", ids['flight_go_ch']), ("Flight (HKG-DMK)", ids['flight_back_ch'])]
-        for i, (name, d_id) in enumerate(docs_ch):
-            if st.button(f"📄 {name}", key=f"doc_btn_ch_{i}", use_container_width=True):
-                show_doc_dialog(f"https://drive.google.com/file/d/{d_id}/view", name)
+        if st.checkbox("Disney Park Tickets - TP"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_ticket_ch']}/view", "Disney Ticket (CH)")
+        if st.checkbox("Disney Premier Access - TP"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_access_ch']}/view", "Disney Access (CH)")
+        if st.checkbox("Meal Voucher 2-in-1 - TP"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['meal_ch']}/view", "Meal Voucher (CH)")
+        if st.checkbox("Flight (DMK-HKG) - TP"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_go_ch']}/view", "Flight Go (CH)")
+        if st.checkbox("Flight (HKG-DMK) - TP"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_back_ch']}/view", "Flight Back (CH)")
