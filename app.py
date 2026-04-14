@@ -323,71 +323,85 @@ with tab4:
     st.markdown(f'<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118147.68202022026!2d114.1160352!3d22.2922752!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3403f99e4369a19d%3A0x600913959da31416!2sHong%20Kong!5e0!3m2!1sen!2sth!4v1710000000000!5m2!1sen!2sth" width="100%" height="450" style="border:0; border-radius:15px;" allowfullscreen="" loading="lazy"></iframe>', unsafe_allow_html=True)
     st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.google.com", use_container_width=True)
 
-# --- TAB 5: FILES (เวอร์ชัน Ultra-Minimal) ---
+# --- TAB 5: FILES (Minimalist Luxury Style) ---
 with tab5:
     st.markdown("""
         <style>
-        /* ปรับแต่งปุ่มให้ดูเหมือน Text Link เรียบๆ */
+        /* ปรับแต่งปุ่มให้ดูเหมือน List Item ในแอป iOS */
         div.stButton > button[p-id*="doc_btn"] {
             border: none !important;
-            background-color: transparent !important;
+            background-color: #ffffff !important;
             text-align: left !important;
             justify-content: flex-start !important;
-            padding: 8px 0px !important;
+            padding: 15px 15px !important;
             font-size: 14px !important;
             font-weight: 300 !important;
-            color: #666 !important;
-            letter-spacing: 0.5px !important;
-            min-height: 0px !important;
+            color: #444 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+            margin-bottom: 8px !important;
+            transition: all 0.3s ease !important;
         }
         
-        /* เอฟเฟกต์เวลาเอาเมาส์วาง ให้ตัวหนังสือเข้มขึ้นเล็กน้อย */
+        /* เอฟเฟกต์ตอนกด/วางเมาส์ ให้ดูเด้งนุ่มๆ */
         div.stButton > button[p-id*="doc_btn"]:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05) !important;
+            transform: translateY(-1px);
             color: #000 !important;
-            background-color: transparent !important;
         }
 
-        /* ปรับ Expander ให้ดูเบาบางลง */
+        /* ปรับสไตล์ Expander ให้ดูแพงขึ้น */
         .stExpander {
             border: none !important;
-            border-bottom: 0.5px solid #f0f0f0 !important;
             background-color: transparent !important;
+            margin-bottom: 20px !important;
+        }
+        
+        .stExpander summary {
+            font-size: 12px !important;
+            letter-spacing: 2px !important;
+            color: #888 !important;
+            text-transform: uppercase;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div style="margin-top: 10px;"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="margin-top: 20px;"></div>', unsafe_allow_html=True)
     ids = st.secrets["drive_ids"]
 
-    # --- ส่วนรายการเอกสาร ---
-    with st.expander("SHARED DOCUMENTS", expanded=True):
-        if st.button("○ Travel Plan", key="doc_btn_1", use_container_width=True):
+    # --- SHARED SECTION ---
+    with st.expander("Public Documents 📂", expanded=True):
+        if st.button("Itinerary & Plan ☁️", key="doc_btn_1", use_container_width=True):
             show_doc_dialog(f"https://drive.google.com/file/d/{ids['travel_plan']}/view", "Travel Plan")
-        if st.button("○ Hotel Confirmation", key="doc_btn_2", use_container_width=True):
+        if st.button("Hotel Confirmation 🏨", key="doc_btn_2", use_container_width=True):
             show_doc_dialog(f"https://drive.google.com/file/d/{ids['hotel_conf']}/view", "Hotel Confirmation")
-        if st.button("○ Check-in Guide", key="doc_btn_3", use_container_width=True):
+        if st.button("Check-in Guide 🔑", key="doc_btn_3", use_container_width=True):
             show_doc_dialog(f"https://drive.google.com/file/d/{ids['check_in']}/view", "Check-in")
 
-    with st.expander("KK'S DOCUMENTS"):
+    # --- KK SECTION ---
+    with st.expander("Kriangkrit 👤"):
         docs_kk = [
-            ("Disney Ticket", ids['disney_ticket_kk']),
-            ("Disney Access", ids['disney_access_kk']),
-            ("Meal Voucher", ids['meal_kk']),
-            ("Flight (DMK-HKG)", ids['flight_go_kk']),
-            ("Flight (HKG-DMK)", ids['flight_back_kk'])
+            ("Disney Ticket 🎫", ids['disney_ticket_kk']),
+            ("Disney Premier Access ⚡", ids['disney_access_kk']),
+            ("Meal Voucher 🍱", ids['meal_kk']),
+            ("Flight Go ✈️", ids['flight_go_kk']),
+            ("Flight Back ✈️", ids['flight_back_kk'])
         ]
         for i, (name, d_id) in enumerate(docs_kk):
-            if st.button(f"○ {name}", key=f"doc_btn_kk_{i}", use_container_width=True):
+            if st.button(name, key=f"doc_btn_kk_{i}", use_container_width=True):
                 show_doc_dialog(f"https://drive.google.com/file/d/{d_id}/view", name)
 
-    with st.expander("CHARLIE'S DOCUMENTS"):
+    # --- CHARLIE SECTION ---
+    with st.expander("Charlie 👤"):
         docs_ch = [
-            ("Disney Ticket", ids['disney_ticket_ch']),
-            ("Disney Access", ids['disney_access_ch']),
-            ("Meal Voucher", ids['meal_ch']),
-            ("Flight (DMK-HKG)", ids['flight_go_ch']),
-            ("Flight (HKG-DMK)", ids['flight_back_ch'])
+            ("Disney Ticket 🎫", ids['disney_ticket_ch']),
+            ("Disney Premier Access ⚡", ids['disney_access_ch']),
+            ("Meal Voucher 🍱", ids['meal_ch']),
+            ("Flight Go ✈️", ids['flight_go_ch']),
+            ("Flight Back ✈️", ids['flight_back_ch'])
         ]
         for i, (name, d_id) in enumerate(docs_ch):
-            if st.button(f"○ {name}", key=f"doc_btn_ch_{i}", use_container_width=True):
+            if st.button(name, key=f"doc_btn_ch_{i}", use_container_width=True):
                 show_doc_dialog(f"https://drive.google.com/file/d/{d_id}/view", name)
+
+    st.markdown('<p style="font-size: 10px; color: #eee; text-align: center; margin-top: 40px;">HK2026</p>', unsafe_allow_html=True)
