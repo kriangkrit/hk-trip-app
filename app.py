@@ -233,25 +233,89 @@ with tab2:
 with tab3:
     if not df.empty and df['Amount_HKD'].sum() > 0:
         cat_sum = df.groupby('Category')['Amount_HKD'].sum().reset_index()
-        fig = px.pie(cat_sum[cat_sum['Amount_HKD']>0], values='Amount_HKD', names='Category', hole=0.7, color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig.update_layout(showlegend=True, margin=dict(t=10, b=10, l=10, r=10), font=dict(family="Anuphan", size=12), legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
-        st.plotly_chart(fig, use_container_width=True)
-        st.table(cat_sum[cat_sum['Amount_HKD']>0].style.format({'Amount_HKD': '{:,.0f}'}))
+        cat_sum = cat_sum[cat_sum['Amount_HKD'] > 0]
+        if not cat_sum.empty:
+            fig = px.pie(cat_sum, values='Amount_HKD', names='Category', hole=0.7, 
+                         color_discrete_sequence=px.colors.qualitative.Pastel)
+            fig.update_layout(
+                showlegend=True, 
+                margin=dict(t=10, b=10, l=10, r=10), 
+                font=dict(family="Anuphan", size=12),
+                legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown("<p style='font-size:10px; font-weight:300; letter-spacing:1.5px; text-align:center; color:#999; text-transform:uppercase;'>Category Breakdown</p>", unsafe_allow_html=True)
+            st.table(cat_sum.style.format({'Amount_HKD': '{:,.0f}'}))
+            st.divider()
+
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
+        df['Is_Settled_Bool'] = df['Is_Settled'].apply(lambda x: str(x).upper() == 'TRUE' or x == True)
+        
         bal = {m: 0.0 for m in members}
-        for _, r in df[df['Is_Settled'].apply(lambda x: str(x).upper() != 'TRUE' and x != True)].iterrows():
+        for _, r in df[df['Is_Settled_Bool'] == False].iterrows():
             bal[r['Payer']] += float(r['Amount_HKD'])
             p_list = [p.strip() for p in str(r['Participants']).split(",") if p.strip()]
             if p_list:
                 share = float(r['Amount_HKD']) / len(p_list)
                 for p in p_list:
                     if p in bal: bal[p] -= share
+
         diff = bal["KK"]
-        st.markdown(f'<div style="display: flex; justify-content: center; gap: 40px; margin: 20px 0;"><div style="text-align: center;"><p style="font-size: 10px; color: #999; text-transform: uppercase;">Transfer (HKD)</p><p style="font-size: 18px;">{abs(diff):,.2f}</p></div><div style="text-align: center;"><p style="font-size: 10px; color: #999; text-transform: uppercase;">Transfer (THB)</p><p style="font-size: 18px;">{abs(diff)*rate:,.0f}</p></div></div>', unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style="display: flex; justify-content: center; gap: 40px; margin: 20px 0; font-family: 'Anuphan', sans-serif;">
+                <div style="text-align: center;">
+                    <p style="font-size: 10px; color: #999; letter-spacing: 1px; margin-bottom: 5px; text-transform: uppercase;">Transfer (HKD)</p>
+                    <p style="font-size: 18px; font-weight: 300; color: #444; margin: 0;">{abs(diff):,.2f}</p>
+                </div>
+                <div style="text-align: center;">
+                    <p style="font-size: 10px; color: #999; letter-spacing: 1px; margin-bottom: 5px; text-transform: uppercase;">Transfer (THB)</p>
+                    <p style="font-size: 18px; font-weight: 300; color: #444; margin: 0;">{abs(diff)*rate:,.0f}</p>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
         if diff > 0.01: st.info("Charlie → KK")
         elif diff < -0.01: st.info("KK → Charlie")
         else: st.success("Balanced")
-    else: st.info("No data found.")
+
+        st.markdown("<hr style='border: 0.5px solid #eee; margin-top: 30px; margin-bottom: 20px;'>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:10px; font-weight:300; letter-spacing:1.5px; text-align:center; color:#999; text-transform:uppercase;'>Net Spend Per Person</p>", unsafe_allow_html=True)
+        
+        usage = {m: 0.0 for m in members}
+        user_items = {m: [] for m in members}
+        for _, r in df.iterrows():
+            p_list = [p.strip() for p in str(r['Participants']).split(",") if p.strip()]
+            if p_list:
+                share = float(r['Amount_HKD']) / len(p_list)
+                for p in p_list: 
+                    if p in usage: 
+                        usage[p] += share
+                        user_items[p].append(f"{r['Item']} ({share:,.0f})")
+        
+        usage_df = pd.DataFrame([{"Name": m, "HKD": usage[m], "THB": usage[m]*rate} for m in members])
+        st.table(usage_df.style.format({'HKD': '{:,.2f}', 'THB': '{:,.2f}'}))
+        st.write("") 
+        
+        kk_list = '<br>'.join([f"• {i}" for i in user_items["KK"]]) if user_items["KK"] else "None"
+        ch_list = '<br>'.join([f"• {i}" for i in user_items["Charlie"]]) if user_items["Charlie"] else "None"
+
+        st.markdown(f"""
+            <div style="display: flex; justify-content: center; align-items: flex-start; gap: 30px; font-family: 'Anuphan', sans-serif; margin-bottom: 40px;">
+                <div style="flex: 0 1 auto; min-width: 130px;">
+                    <p style="font-size: 10px; font-weight: 400; color: #aaa; text-align: center; margin-bottom: 12px; letter-spacing: 2px; text-transform: uppercase;">KK's Items</p>
+                    <div style="font-size: 11px; color: #777; line-height: 1.8; text-align: center; font-weight: 300;">{kk_list}</div>
+                </div>
+                <div style="width: 1px; height: 40px; background-color: #eee; align-self: center;"></div>
+                <div style="flex: 0 1 auto; min-width: 130px;">
+                    <p style="font-size: 10px; font-weight: 400; color: #aaa; text-align: center; margin-bottom: 12px; letter-spacing: 2px; text-transform: uppercase;">Charlie's Items</p>
+                    <div style="font-size: 11px; color: #777; line-height: 1.8; text-align: center; font-weight: 300;">{ch_list}</div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+            
+    else: 
+        st.info("No data found.")
+
 
 # --- TAB 4: MAP ---
 with tab4:
