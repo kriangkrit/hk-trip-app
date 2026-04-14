@@ -207,9 +207,20 @@ with tab1:
                     u_parts = st.multiselect("Split with", members, default=[p.strip() for p in str(row['Participants']).split(",") if p.strip() in members])
                     u_note = st.text_input("Note", value=str(row['Note']))
                     u_settled = st.checkbox("Settled", value=bool(row['Is_Settled']))
+                    
                     if st.form_submit_button("UPDATE"):
-                        df.at[idx, 'Item'], df.at[idx, 'Amount_HKD'], df.at[idx, 'Payer'], df.at[idx, 'Category'], df.at[idx, 'Participants'], df.at[idx, 'Note'], df.at[idx, 'Is_Settled'] = str(u_item), float(u_amt), str(u_payer), str(u_cat), ", ".join(u_parts), str(u_note), bool(u_settled)
+                        # แก้ไข TypeError โดยการแปลงเป็น object ก่อนอัปเดตค่า
+                        df = df.astype(object)
+                        df.at[idx, 'Item'] = str(u_item)
+                        df.at[idx, 'Amount_HKD'] = float(u_amt)
+                        df.at[idx, 'Payer'] = str(u_payer)
+                        df.at[idx, 'Category'] = str(u_cat)
+                        df.at[idx, 'Participants'] = ", ".join(u_parts)
+                        df.at[idx, 'Note'] = str(u_note)
+                        df.at[idx, 'Is_Settled'] = bool(u_settled)
+                        
                         conn.update(spreadsheet=SHEET_URL, worksheet=0, data=df)
+                        st.success("Updated!")
                         st.rerun()
         st.divider()
         st.dataframe(df.iloc[::-1][['Timestamp', 'Item', 'Amount_HKD', 'Payer']], use_container_width=True, hide_index=True)
