@@ -138,9 +138,13 @@ if not check_password():
     st.stop()
 
 # --- Helper Functions ---
-def embed_pdf(url):
+def embed_pdf(url, title="Document"):
     try:
         url = url.strip()
+        # 1. สร้างปุ่มสำหรับเปิดไฟล์แยก (แก้ปัญหาเรื่อง Cookies ในมือถือได้ 100%)
+        st.link_button(f"📂 Open {title}", url, use_container_width=True)
+        
+        # 2. ส่วนของ iframe พรีวิว (เพื่อความสวยงาม ถ้าเปิดได้)
         if "drive.google.com" in url:
             if "/d/" in url:
                 file_id = url.split("/d/")[1].split("/")[0]
@@ -152,9 +156,10 @@ def embed_pdf(url):
             
             embed_url = f"https://drive.google.com/file/d/{file_id}/preview"
             st.markdown(f'''
-                <iframe src="{embed_url}" width="100%" height="550px" 
-                style="border: none; border-radius: 15px; background: #f9f9f9;">
+                <iframe src="{embed_url}" width="100%" height="450px" 
+                style="border: none; border-radius: 15px; background: #f9f9f9; margin-top: 10px;">
                 </iframe>
+                <div style="margin-bottom: 20px;"></div>
             ''', unsafe_allow_html=True)
         else:
             st.warning("⚠️ Please use Google Drive link")
@@ -372,36 +377,41 @@ with tab4:
     st.write("")
     st.link_button("OPEN IN GOOGLE MAPS APP", "https://maps.google.com", use_container_width=True)
 
-# --- TAB 5: FILES ---
+# --- TAB 5: FILES (โค้ดใหม่ที่ใส่ทั้งสองอย่าง) ---
 with tab5:
     st.markdown('<div class="small-header">TRAVEL DOCUMENTS</div>', unsafe_allow_html=True)
+    
+    # ดึงข้อมูล IDs จาก Secrets
     ids = st.secrets["drive_ids"]
+
     with st.expander("🏨 SHARED DOCUMENTS", expanded=True):
         if st.checkbox("Hong Kong Personal Travel Plan"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['travel_plan']}/view")
+            embed_pdf(f"https://drive.google.com/file/d/{ids['travel_plan']}/view", "Travel Plan")
         if st.checkbox("Hotel Confirmation"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['hotel_conf']}/view")
+            embed_pdf(f"https://drive.google.com/file/d/{ids['hotel_conf']}/view", "Hotel Confirmation")
         if st.checkbox("Special Check-in"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['check_in']}/view")
+            embed_pdf(f"https://drive.google.com/file/d/{ids['check_in']}/view", "Check-in Info")
+
     with st.expander("👤 KK'S DOCUMENTS"):
         if st.checkbox("Disney Park Tickets - KK"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_ticket_kk']}/view")
+            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_ticket_kk']}/view", "Disney Ticket (KK)")
         if st.checkbox("Disney Premier Access - KK"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_access_kk']}/view")
+            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_access_kk']}/view", "Disney Access (KK)")
         if st.checkbox("Meal Voucher 3-in-1 - KK"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['meal_kk']}/view")
-        if st.checkbox("Flight Itinerary (DMK-HKG) - KK"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_go_kk']}/view")
-        if st.checkbox("Flight Itinerary (HKG-DMK) - KK"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_back_kk']}/view")
+            embed_pdf(f"https://drive.google.com/file/d/{ids['meal_kk']}/view", "Meal Voucher (KK)")
+        if st.checkbox("Flight (DMK-HKG) - KK"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_go_kk']}/view", "Flight Go (KK)")
+        if st.checkbox("Flight (HKG-DMK) - KK"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_back_kk']}/view", "Flight Back (KK)")
+
     with st.expander("👤 CHARLIE'S DOCUMENTS"):
         if st.checkbox("Disney Park Tickets - TP"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_ticket_ch']}/view")
+            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_ticket_ch']}/view", "Disney Ticket (CH)")
         if st.checkbox("Disney Premier Access - TP"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_access_ch']}/view")
+            embed_pdf(f"https://drive.google.com/file/d/{ids['disney_access_ch']}/view", "Disney Access (CH)")
         if st.checkbox("Meal Voucher 2-in-1 - TP"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['meal_ch']}/view")
-        if st.checkbox("Flight Itinerary (DMK-HKG) - TP"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_go_ch']}/view")
-        if st.checkbox("Flight Itinerary (HKG-DMK) - TP"):
-            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_back_ch']}/view")
+            embed_pdf(f"https://drive.google.com/file/d/{ids['meal_ch']}/view", "Meal Voucher (CH)")
+        if st.checkbox("Flight (DMK-HKG) - TP"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_go_ch']}/view", "Flight Go (CH)")
+        if st.checkbox("Flight (HKG-DMK) - TP"):
+            embed_pdf(f"https://drive.google.com/file/d/{ids['flight_back_ch']}/view", "Flight Back (CH)")
