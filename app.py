@@ -392,7 +392,7 @@ with tab5:
                 show_doc_dialog(f"https://drive.google.com/file/d/{d_id}/view", name)
 
     # --- CHARLIE SECTION ---
-    with st.expander("Charlie's DOCUMENTS 👤"):
+    with st.expander("CHARLIE'S DOCUMENTS 👤"):
         docs_ch = [
             ("Disney Ticket 🎫", ids['disney_ticket_ch']),
             ("Disney Premier Access ⚡", ids['disney_access_ch']),
