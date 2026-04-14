@@ -122,7 +122,7 @@ def check_password():
         st.markdown("""
             <div class="login-container">
                 <div class="login-title">Hong Kong</div>
-                <div class="login-subtitle">A Visual Journey 2026</div>
+                <div class="login-subtitle">Journey 2026</div>
             </div>
         """, unsafe_allow_html=True)
         
@@ -273,7 +273,7 @@ with tab2:
                     with c_btn:
                         if 'Directions_URL' in df_plan.columns and pd.notna(r['Directions_URL']):
                             st.markdown('<div style="margin-top: 18px;"></div>', unsafe_allow_html=True)
-                            st.link_button("DIR", r['Directions_URL'], key=f"get_dir_{i}")
+                            st.link_button("GET", r['Directions_URL'], key=f"get_dir_{i}")
                     st.write("")
     except Exception as e: st.info(f"Check Itinerary: {e}")
 
