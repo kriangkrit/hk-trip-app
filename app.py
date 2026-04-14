@@ -370,8 +370,8 @@ with tab5:
     ids = st.secrets["drive_ids"]
 
     # --- SHARED SECTION ---
-    with st.expander("Public Documents 📂", expanded=True):
-        if st.button("Itinerary & Plan ☁️", key="doc_btn_1", use_container_width=True):
+    with st.expander("Documents 📂", expanded=True):
+        if st.button("Travel Plan ☁️", key="doc_btn_1", use_container_width=True):
             show_doc_dialog(f"https://drive.google.com/file/d/{ids['travel_plan']}/view", "Travel Plan")
         if st.button("Hotel Confirmation 🏨", key="doc_btn_2", use_container_width=True):
             show_doc_dialog(f"https://drive.google.com/file/d/{ids['hotel_conf']}/view", "Hotel Confirmation")
@@ -379,13 +379,13 @@ with tab5:
             show_doc_dialog(f"https://drive.google.com/file/d/{ids['check_in']}/view", "Check-in")
 
     # --- KK SECTION ---
-    with st.expander("Kriangkrit 👤"):
+    with st.expander("KK'S DOCUMENTS 👤"):
         docs_kk = [
             ("Disney Ticket 🎫", ids['disney_ticket_kk']),
             ("Disney Premier Access ⚡", ids['disney_access_kk']),
             ("Meal Voucher 🍱", ids['meal_kk']),
-            ("Flight Go ✈️", ids['flight_go_kk']),
-            ("Flight Back ✈️", ids['flight_back_kk'])
+            ("Flight (DMK-HKG) ✈️", ids['flight_go_kk']),
+            ("Flight (HKG-DMK) ✈️", ids['flight_back_kk'])
         ]
         for i, (name, d_id) in enumerate(docs_kk):
             if st.button(name, key=f"doc_btn_kk_{i}", use_container_width=True):
@@ -397,8 +397,8 @@ with tab5:
             ("Disney Ticket 🎫", ids['disney_ticket_ch']),
             ("Disney Premier Access ⚡", ids['disney_access_ch']),
             ("Meal Voucher 🍱", ids['meal_ch']),
-            ("Flight Go ✈️", ids['flight_go_ch']),
-            ("Flight Back ✈️", ids['flight_back_ch'])
+            ("Flight (DMK-HKG) ✈️", ids['flight_go_ch']),
+            ("Flight (HKG-DMK) ✈️", ids['flight_back_ch'])
         ]
         for i, (name, d_id) in enumerate(docs_ch):
             if st.button(name, key=f"doc_btn_ch_{i}", use_container_width=True):
