@@ -165,7 +165,7 @@ with tab1:
     with st.form("add_form", clear_on_submit=True):
         item = st.text_input("What did you buy?", placeholder="e.g. Dim Sum")
         c1, c2 = st.columns(2)
-        with c1: amount = st.number_input("Price (HKD)", min_value=0.0, step=1.0, format="%.0f")
+        with c1: amount = st.number_input("Price (HKD)", min_value=0.0, step=0.01, format="%.2f")
         with c2: payer = st.selectbox("Payer", members)
         c3, c4 = st.columns(2)
         with c3: cat = st.selectbox("Category", categories)
@@ -245,7 +245,7 @@ with tab3:
             )
             st.plotly_chart(fig, use_container_width=True)
             st.markdown("<p style='font-size:10px; font-weight:300; letter-spacing:1.5px; text-align:center; color:#999; text-transform:uppercase;'>Category Breakdown</p>", unsafe_allow_html=True)
-            st.table(cat_sum.style.format({'Amount_HKD': '{:,.0f}'}))
+            st.table(cat_sum.style.format({'Amount_HKD': '{:,.2f}'}))
             st.divider()
 
         rate = st.number_input("Rate (1 HKD = ? THB)", value=4.5, step=0.01)
